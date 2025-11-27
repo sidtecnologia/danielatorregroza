@@ -1,5 +1,3 @@
-
-
 const { createClient } = supabase;
 
 let SB_URL = null;
@@ -90,14 +88,12 @@ const shuffleArray = (array) => {
     return array;
 };
 
-// --- BANNER CAROUSEL (dynamic init) ---
+// --- Banner functions (unchanged from prior) ---
 function initBannerCarousel(images = []) {
-    // clear previous state if any
     if (!bannerCarousel) return;
     bannerCarousel.innerHTML = '';
     bannerDots.innerHTML = '';
     if (!images || images.length === 0) {
-        // keep a placeholder slide
         const slide = document.createElement('div');
         slide.className = 'banner-slide';
         slide.innerHTML = `<img src="img/favicon.png" alt="Promoción">`;
@@ -112,7 +108,6 @@ function initBannerCarousel(images = []) {
         bannerCarousel.appendChild(slide);
     });
 
-    // build dots
     const slides = bannerCarousel.querySelectorAll('.banner-slide');
     slides.forEach((_, idx) => {
         const dot = document.createElement('div');
@@ -125,7 +120,6 @@ function initBannerCarousel(images = []) {
         bannerDots.appendChild(dot);
     });
 
-    // internal state to manage slides including clones like original implementation
     if (bannerCarouselState && bannerCarouselState.destroy) {
         bannerCarouselState.destroy();
     }
@@ -136,12 +130,10 @@ function initBannerCarousel(images = []) {
 
 function createBannerState(container, slidesNodeList, dotsContainer) {
     let slides = Array.from(container.querySelectorAll('.banner-slide'));
-    // clone first and last to allow smooth loop
     const firstClone = slides[0].cloneNode(true);
     const lastClone = slides[slides.length - 1].cloneNode(true);
     container.appendChild(firstClone);
     container.insertBefore(lastClone, slides[0]);
-    // recompute slides collection
     slides = Array.from(container.querySelectorAll('.banner-slide'));
     let current = 1;
     container.style.transform = `translateX(-${current * 100}%)`;
@@ -164,17 +156,13 @@ function createBannerState(container, slidesNodeList, dotsContainer) {
                 container.style.transition = 'none';
                 current = 1;
                 container.style.transform = `translateX(-${current * 100}%)`;
-                requestAnimationFrame(() => {
-                    setTimeout(() => {
-                        container.style.transition = 'transform 0.5s ease';
-                    }, 50);
-                });
+                setTimeout(() => container.style.transition = 'transform 0.5s ease', 50);
             }, 500);
         }
     }
 
     function goTo(idx) {
-        current = idx + 1; // account for clone at start
+        current = idx + 1;
         update();
         resetInterval();
     }
@@ -184,7 +172,6 @@ function createBannerState(container, slidesNodeList, dotsContainer) {
         intervalId = setInterval(next, 4000);
     }
 
-    // touch and mouse simple handlers
     let startX = 0;
     container.addEventListener('touchstart', e => startX = e.touches[0].clientX, { passive: true });
     container.addEventListener('touchend', e => {
@@ -212,19 +199,7 @@ function createBannerState(container, slidesNodeList, dotsContainer) {
     return {
         start: () => { resetInterval(); },
         goTo,
-        destroy: () => {
-            clearInterval(intervalId);
-            // remove clones if exist
-            try {
-                // remove first and last clones safely
-                const nodes = container.querySelectorAll('.banner-slide');
-                if (nodes.length > slides.length) {
-                    // best effort
-                    container.innerHTML = '';
-                    slides.forEach(s => container.appendChild(s));
-                }
-            } catch (e) {}
-        }
+        destroy: () => clearInterval(intervalId)
     };
 }
 
@@ -238,11 +213,9 @@ async function fetchBannerImagesFromSupabase() {
             return [];
         }
         if (!files || files.length === 0) return [];
-        // sort by name for predictable order
         const sorted = files.slice().sort((a, b) => a.name.localeCompare(b.name));
         const urls = sorted.map(f => {
             const { data } = supabaseClient.storage.from('images').getPublicUrl(`baner/${f.name}`);
-            // data.publicUrl
             return data?.publicUrl || '';
         }).filter(Boolean);
         return urls;
@@ -252,7 +225,7 @@ async function fetchBannerImagesFromSupabase() {
     }
 }
 
-// --- Renderizado y tarjetas (sin romper lógica original) ---
+// --- Renderizado y tarjetas ---
 const generateProductCard = (p) => {
     let bestSellerTag = '';
     if (p.bestSeller) {
@@ -266,7 +239,6 @@ const generateProductCard = (p) => {
         stockClass = ' out-of-stock';
     }
 
-    // allow offer style classes (for offers grid visual variety)
     const offerClass = p._offerStyle ? ` ${p._offerStyle}` : '';
 
     return `
@@ -293,7 +265,6 @@ const generateProductCard = (p) => {
     `;
 };
 
-
 // --- Renderizado con paginación ---
 function renderProducts(container, data, page = 1, perPage = 20, withPagination = false) {
     container.innerHTML = '';
@@ -315,7 +286,6 @@ function renderProducts(container, data, page = 1, perPage = 20, withPagination 
         if (paginationContainer) paginationContainer.innerHTML = '';
     }
 
-    // Tras renderizar, mostramos hints pequeños
     try {
         showImageHints(container);
     } catch (e) {}
@@ -347,7 +317,6 @@ function showImageHints(container) {
 function enableTouchHints() {
   let lastTouchedCard = null;
   let lastTouchMoved = false;
-
   function onTouchStart(e) {
     lastTouchMoved = false;
     const card = e.target.closest('.product-card');
@@ -366,7 +335,6 @@ function enableTouchHints() {
     }, 2200);
     lastTouchedCard = card;
   }
-
   function onTouchMove() {
     lastTouchMoved = true;
     if (lastTouchedCard) {
@@ -379,7 +347,6 @@ function enableTouchHints() {
       lastTouchedCard = null;
     }
   }
-
   function onTouchEnd() {
     if (!lastTouchedCard) return;
     const h = lastTouchedCard.querySelector('.image-hint');
@@ -396,7 +363,6 @@ function enableTouchHints() {
     }
     lastTouchedCard = null;
   }
-
   document.addEventListener('touchstart', onTouchStart, { passive: true });
   document.addEventListener('touchmove', onTouchMove, { passive: true });
   document.addEventListener('touchend', onTouchEnd, { passive: true });
@@ -450,39 +416,56 @@ const generateCategoryCarousel = () => {
     });
 };
 
-/* Collage render - NO repite imágenes.
-   - usa una selección única de hasta 16 imágenes distintas
+/* Collage render actualizado:
+   - NO repite imágenes.
+   - Calcula una cuadrícula cuadrada (cols x rows) acorde a la cantidad de imágenes,
+     ajusta el tamaño de las celdas para formar un cuadrado sin huecos.
 */
+function computeCollageGridLayout(totalItems) {
+    // number of columns = ceil(sqrt(n))
+    const cols = Math.ceil(Math.sqrt(totalItems || 1));
+    const rows = Math.ceil(totalItems / cols);
+    return { cols, rows };
+}
+
+function applyCollageGridStyles(cols, rows) {
+    if (!collageGrid) return;
+    collageGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    // we compute cell height based on collageGrid width to keep square cells
+    const gridWidth = collageGrid.clientWidth || collageGrid.offsetWidth || 480;
+    const cellSize = Math.floor(gridWidth / cols);
+    collageGrid.style.gridAutoRows = `${cellSize}px`;
+    collageGrid.style.height = `${cellSize * rows}px`;
+}
+
 function renderCollage() {
     if (!collageGrid) return;
     collageGrid.innerHTML = '';
 
-    // pool de objetos { id, img }
     const pool = products
         .filter(p => p.image && p.image.length > 0)
         .map(p => ({ id: p.id, img: p.image[0] }));
 
     if (pool.length === 0) return;
 
-    // shuffle but ensure uniqueness by taking first N unique
+    // keep unique order (shuffle)
     const shuffled = shuffleArray(pool.slice());
-    const maxCells = 16;
-    const totalCells = Math.min(shuffled.length, maxCells);
 
-    for (let idx = 0; idx < totalCells; idx++) {
+    // compute grid layout based on number of images available (do not repeat images)
+    const totalItems = shuffled.length;
+    const layout = computeCollageGridLayout(totalItems);
+    applyCollageGridStyles(layout.cols, layout.rows);
+
+    // create items exactly for the images (no spans)
+    for (let idx = 0; idx < totalItems; idx++) {
         const p = shuffled[idx];
         const item = document.createElement('div');
         item.className = 'collage-item';
         item.setAttribute('data-product-id', p.id);
-        // spans aleatorios 1 o 2 pero evitando expandirse demasiadas veces
-        const colSpan = Math.random() > 0.85 ? 2 : 1;
-        const rowSpan = Math.random() > 0.85 ? 2 : 1;
-        item.style.gridColumn = `span ${colSpan}`;
-        item.style.gridRow = `span ${rowSpan}`;
+        item.style.gridColumn = `span 1`;
+        item.style.gridRow = `span 1`;
         item.innerHTML = `<img src="${p.img}" loading="lazy" alt="collage">`;
-        // click abre modal del producto
         item.addEventListener('click', (ev) => {
-            // animación breve de selección
             item.classList.add('collage-item-selected');
             setTimeout(() => item.classList.remove('collage-item-selected'), 260);
             const id = item.getAttribute('data-product-id');
@@ -492,30 +475,35 @@ function renderCollage() {
     }
 }
 
-/* Helper para leer tallas/colores de acuerdo a la estructura de la BD:
-   - soporta product.sizes (array), product.size (string con CSV o single)
-   - soporta product.colors (array), product.color (string con CSV o single)
-*/
+// recompute collage grid on resize to keep perfect squares
+let collageResizeTimeout = null;
+window.addEventListener('resize', () => {
+    if (collageResizeTimeout) clearTimeout(collageResizeTimeout);
+    collageResizeTimeout = setTimeout(() => {
+        // re-render collage only if there are images
+        if (products && products.length > 0) {
+            renderCollage();
+        }
+    }, 180);
+});
+
+/* Helper para leer tallas/colores de acuerdo a la estructura de la BD */
 function parseOptionsField(field) {
     if (!field) return [];
     if (Array.isArray(field)) return field;
     if (typeof field === 'string') {
-        // dividir por comas si contiene coma, o por | o ;
         if (field.includes(',')) return field.split(',').map(s => s.trim()).filter(Boolean);
         if (field.includes('|')) return field.split('|').map(s => s.trim()).filter(Boolean);
         if (field.includes(';')) return field.split(';').map(s => s.trim()).filter(Boolean);
-        // single value
         return [field.trim()];
     }
-    // fallback
     return [];
 }
 
-/* Búsqueda y UI - ahora con búsqueda ampliada por múltiples campos */
+/* Búsqueda y UI (ampliada) */
 function productMatchesQuery(p, q) {
     if (!q) return true;
     const Q = q.toLowerCase();
-    // basic string fields
     const fields = [
         p.name,
         p.description,
@@ -526,16 +514,11 @@ function productMatchesQuery(p, q) {
         (p.tags && Array.isArray(p.tags) ? p.tags.join(' ') : p.tags)
     ].filter(Boolean).map(s => String(s).toLowerCase());
 
-    // sizes and colors: parse all possible fields
     const sizes = parseOptionsField(p.sizes || p.size || p.size_options || []);
     const colors = parseOptionsField(p.colors || p.color || p.color_options || []);
 
-    // numeric fields also considered (price)
-    const numericFields = [
-        p.price ? String(p.price) : ''
-    ];
+    const numericFields = [ p.price ? String(p.price) : '' ];
 
-    // check presence
     for (const f of fields) {
         if (f.includes(Q)) return true;
     }
@@ -570,11 +553,8 @@ const showDefaultSections = () => {
     offersSection.style.display = 'block';
     filteredSection.style.display = 'none';
     const featured = shuffleArray(products.filter(p => p.featured)).slice(0, 25);
-
-    // offers: add visual variety without changing product data (assign class)
     const offers = shuffleArray(products.filter(p => p.isOffer)).slice(0, 25).map((p, idx) => {
         const clone = Object.assign({}, p);
-        // 3 styles rotating
         clone._offerStyle = `offer-style-${(idx % 3) + 1}`;
         return clone;
     });
@@ -652,12 +632,12 @@ document.addEventListener('click', (e) => {
         closeModal(productModal);
     }
 
-    // Open store modal when clicking logo
+    // Abrir modal de tienda al presionar logo
     if (e.target === logoElement || e.target.closest('.brand')) {
         if (logoElement) openStoreModalFromLogo();
     }
 
-    // If clicking inside product carousel to enlarge image
+    // Al click en imagen dentro del carousel del producto abrimos viewer
     if (e.target.closest('.carousel-image')) {
         const imgNodes = Array.from(carouselImagesContainer.querySelectorAll('.carousel-image'));
         const clicked = e.target.closest('.carousel-image');
@@ -669,6 +649,7 @@ document.addEventListener('click', (e) => {
 });
 
 // --- Lógica de Modales ---
+// closeModal ahora sólo limpia selección si se está cerrando el productModal
 function showModal(modal) {
     modal.style.display = 'flex';
     modal.setAttribute('aria-hidden', 'false');
@@ -677,22 +658,29 @@ function showModal(modal) {
 function closeModal(modal) {
     modal.style.display = 'none';
     modal.setAttribute('aria-hidden', 'true');
-    // limpiar selección temporal
-    selectedSize = null;
-    selectedColor = null;
-    if (sizeOptionsContainer) sizeOptionsContainer.innerHTML = '';
-    if (colorOptionsContainer) colorOptionsContainer.innerHTML = '';
-    modalAddToCartBtn.disabled = true;
-    modalAddToCartBtn.setAttribute('aria-disabled', 'true');
+    // sólo limpiar selección si cerramos modal de producto
+    if (modal === productModal) {
+        selectedSize = null;
+        selectedColor = null;
+        if (sizeOptionsContainer) sizeOptionsContainer.innerHTML = '';
+        if (colorOptionsContainer) colorOptionsContainer.innerHTML = '';
+        modalAddToCartBtn.disabled = true;
+        modalAddToCartBtn.setAttribute('aria-disabled', 'true');
+    }
 }
 
+// Listener genérico: NO cerrar storeModal al hacer click en backdrop (el usuario debe cerrarlo explícitamente)
 [productModal, cartModal, checkoutModal, orderSuccessModal, storeModal, imageViewerModal].forEach(modal => {
     if (!modal) return;
     modal.addEventListener('click', (e) => {
+        // si se hace click en el backdrop (target === modal)
         if (e.target === modal) {
+            // para storeModal evitamos cierre por backdrop
+            if (modal === storeModal) return;
             closeModal(modal);
         }
         if (e.target.classList.contains('modal-close')) {
+            // cerrar siempre si se clicka la X; la X en storeModal cierra también, pero no resetea tallas/colors
             closeModal(modal);
         }
     });
@@ -702,23 +690,17 @@ closeSuccessBtn && closeSuccessBtn.addEventListener('click', () => {
     closeModal(orderSuccessModal);
 });
 
-// --- Store Modal (opens from logo with origin animation) ---
+// --- Store Modal (abre desde logo, animación y contenido centrado) ---
 function openStoreModalFromLogo() {
-    if (!storeModal) return;
-    // compute origin based on logo center
+    if (!storeModal || !storeModalContent) return;
     const rect = logoElement.getBoundingClientRect();
     const originX = rect.left + rect.width / 2;
     const originY = rect.top + rect.height / 2;
+    // transformOrigin en coordenadas relativas a viewport para efecto
     storeModalContent.style.transformOrigin = `${originX}px ${originY}px`;
-    // add entry animation class
     storeModal.classList.add('animate-from-logo');
     showModal(storeModal);
-    setTimeout(() => storeModal.classList.remove('animate-from-logo'), 600);
-}
-
-function closeStoreModal() {
-    if (!storeModal) return;
-    closeModal(storeModal);
+    setTimeout(() => storeModal.classList.remove('animate-from-logo'), 700);
 }
 
 // --- Product modal open/update ---
@@ -730,12 +712,12 @@ function openProductModal(id) {
     modalProductDescription.textContent = product.description || '';
     modalProductPrice.textContent = `$${money(product.price)}`;
     qtyInput.value = 1;
+    // keep selectedSize/color untouched unless user changed them (do not reset here to preserve if coming from viewer)
     selectedSize = null;
     selectedColor = null;
     renderSizeOptions(product);
     renderColorOptions(product);
     modalAddToCartBtn.dataset.id = product.id;
-    // animación sutil en grupos para indicar obligatorio
     document.getElementById('size-group').classList.add('required-pulse');
     document.getElementById('color-group').classList.add('required-pulse');
     setTimeout(() => {
@@ -746,12 +728,10 @@ function openProductModal(id) {
     showModal(productModal);
 }
 
-/* Render options: ahora leen correctamente desde la estructura de la BD
-   y centran las opciones visualmente (CSS también se actualiza) */
+/* Render options: se mantienen igual */
 function renderSizeOptions(product) {
     if (!sizeOptionsContainer) return;
     sizeOptionsContainer.innerHTML = '';
-    // buscar posibles campos: sizes (array), size (csv/string), size_options
     const raw = product.sizes || product.size || product.size_options || [];
     const sizes = parseOptionsField(raw);
     const finalSizes = sizes.length ? sizes : ['S','M','L','XL'];
@@ -809,7 +789,7 @@ function updateAddToCartEnabled() {
     }
 }
 
-// --- Anuncios (sin cambios) ---
+// Anuncios (sin cambios)
 document.querySelectorAll('.ad-image').forEach(img => {
     img.addEventListener('click', () => {
         const id = img.dataset.productId;
@@ -869,7 +849,6 @@ function updateViewer() {
     if (idx >= images.length) idx = images.length - 1;
     imageViewerModal.dataset.index = String(idx);
     viewerImage.src = images[idx] || '';
-    // hide/show arrows
     viewerPrev.style.display = idx > 0 ? 'flex' : 'none';
     viewerNext.style.display = idx < images.length - 1 ? 'flex' : 'none';
 }
@@ -893,6 +872,7 @@ viewerNext && viewerNext.addEventListener('click', (e) => {
 
 viewerClose && viewerClose.addEventListener('click', () => {
     viewerImage.classList.remove('viewer-show');
+    // closeImageViewer should NOT clear product modal selections, so close only the viewer modal
     setTimeout(() => closeModal(imageViewerModal), 200);
 });
 
@@ -1121,7 +1101,6 @@ whatsappBtn.addEventListener('click', async () => {
     }
 
     try {
-        // 1. Guardar la orden en DB (tabla 'orders') desde cliente (también lo hace API route)
         const { data: orderData, error: orderError } = await supabaseClient
             .from('orders')
             .insert([{
@@ -1140,7 +1119,6 @@ whatsappBtn.addEventListener('click', async () => {
             return;
         }
         
-        // 2. Intentar llamar al API Route (para que el servidor haga updates sensibles)
         const response = await fetch('api/place-order', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1163,7 +1141,6 @@ whatsappBtn.addEventListener('click', async () => {
              }
         }
 
-        // 3. Enviar mensaje de WhatsApp
         const whatsappNumber = '573227671829';
         let message = `Hola mi nombre es ${encodeURIComponent(orderDetails.name)}.%0AHe realizado un pedido para la dirección ${encodeURIComponent(orderDetails.address)}.%0A%0A`;
         orderDetails.items.forEach(item => {
@@ -1173,7 +1150,6 @@ whatsappBtn.addEventListener('click', async () => {
         const link = `https://wa.me/${whatsappNumber}?text=${message}`;
         window.open(link, '_blank');
         
-        // 4. Limpiar y actualizar UI
         cart = []; 
         orderDetails = {}; 
         
@@ -1247,7 +1223,6 @@ const loadConfigAndInitSupabase = async () => {
         supabaseClient = createClient(SB_URL, SB_ANON_KEY);
 
         products = await fetchProductsFromSupabase();
-        // try to fetch banner images from storage and init carousel
         const bannerImages = await fetchBannerImagesFromSupabase();
         initBannerCarousel(bannerImages);
 
@@ -1260,7 +1235,6 @@ const loadConfigAndInitSupabase = async () => {
         updateCart();
     } catch (error) {
         console.error('Error FATAL al iniciar la aplicación:', error);
-        
         const loadingMessage = document.createElement('div');
         loadingMessage.style = 'position:fixed;top:0;left:0;width:100%;height:100%;background:white;display:flex;align-items:center;justify-content:center;color:red;font-weight:bold;text-align:center;padding:20px;z-index:9999;';
         loadingMessage.textContent = 'ERROR DE INICIALIZACIÓN: No se pudo cargar la configuración de la tienda. Revisa la consola para más detalles (Faltan variables de entorno en Vercel).';

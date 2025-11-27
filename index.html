@@ -1,69 +1,17 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    
-    <!-- SEO Básico y Título -->
     <title>Daniela Torregroza | Store</title>
     <meta name="description" content="Catálogo de vestuario. Explora prendas, elige talla y color y realiza tu pedido.">
-    <meta name="keywords" content="Ropa, vestuario, catálogo, tallas, colores, Daniela Torregroza">
-
-    <!-- URL Canónica -->
-    <link rel="canonical" href="https://danielatorregroza.vercel.app/" />
-
-    <!-- SEO Open Graph (para WhatsApp, Facebook, etc.) -->
-    <meta property="og:title" content="Catálogo de Vestuario | Daniela Torregroza" />
-    <meta property="og:description" content="Explora prendas, elige talla y color y haz tu pedido a domicilio." />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://danielatorregroza.vercel.app/" />
-    <meta property="og:image" content="https://danielatorregroza.vercel.app/img/favicon.png" />
-    <meta property="og:image:alt" content="Daniela Torregroza - Vestuario" />
-
-    <!-- SEO Twitter Card -->
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="Catálogo Vestuario Daniela Torregroza">
-    <meta name="twitter:description" content="Explora prendas, elige talla y color y haz tu pedido a domicilio!">
-    <meta name="twitter:image" content="https://danielatorregroza.vercel.app/img/favicon.png">
-
-    <!-- PWA y Meta de Tema -->
     <link rel="manifest" href="./manifest.json" />
     <meta name="theme-color" content="#9f27f4" />
     <link rel="icon" href="https://danielatorregroza.vercel.app/img/favicon.png" />
-    <link rel="apple-touch-icon" href="https://danielatorregroza.vercel.app/img/favicon.png">
-
-    <!-- Fuentes y Estilos Externos (Sin modificar) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
-    
-    <!-- Scripts Externos (Sin modificar) -->
-    <script charset="UTF-8" src="//web.webpushs.com/js/push/1ed281446e2e741d69c9c9a386b5a047_1.js" async></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <!-- JSON-LD (Structured Data) para SEO Local -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Store",
-      "name": "Daniela Torregroza - Vestuario",
-      "image": "https://danielatorregroza.vercel.app/img/favicon.png",
-      "url": "https://danielatorregroza.vercel.app/",
-      "telephone": "+57-3227671829",
-      "priceRange": "$",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "Carrera 27 # 10-50",
-        "addressLocality": "Valledupar",
-        "addressRegion": "Cesar",
-        "postalCode": "680001",
-        "addressCountry": "CO"
-      }
-    }
-    </script>
 </head>
 <body>
     <div class="page-container">
@@ -83,15 +31,11 @@
         </nav>
 
         <section class="main-carousel-wrapper">
-
         <section class="banner-section">
-          <div class="banner-carousel" id="banner-carousel" aria-hidden="false">
-            <!-- Slides will be injected from JS loading bucket/images/baner/ -->
-          </div>
+          <div class="banner-carousel" id="banner-carousel" aria-hidden="false"></div>
           <div class="banner-dots" id="banner-dots"></div>
         </section>
-
-        </nav>
+        </section>
 
         <div class="ticker-wrapper">
             <div class="ticker-text">
@@ -108,7 +52,6 @@
             </div>
         </nav>
 
-        <!-- Nueva sección de collage justo debajo de categorías -->
         <section id="collage-section" class="collage-section">
             <div id="collage-grid" class="collage-grid" aria-hidden="false"></div>
         </section>
@@ -152,7 +95,6 @@
                         <p id="modal-product-description"></p>
                         <p id="modal-product-price" class="price"></p>
 
-                        <!-- Selección obligatoria de talla y color -->
                         <div class="selection-row">
                           <div class="selection-group" id="size-group" data-required="true">
                             <div class="selection-title">Talla</div>
@@ -234,23 +176,23 @@
           </div>
         </div>
 
-        <!-- Store modal (info about the store) -->
+        <!-- Store modal: información centrada y sin subtitulos -->
         <div id="storeModal" class="modal" aria-hidden="true">
           <div class="modal-content-wrapper">
             <div id="store-modal-content" class="checkout-modal-card store-modal-card">
               <button class="modal-close" aria-label="Cerrar">&times;</button>
-              <h2>Daniela Torregroza - Información de la Tienda</h2>
-              <p><strong>Nombre:</strong> Daniela Torregroza</p>
-              <p><strong>Ubicación:</strong> Carrera 27 # 10-50, Valledupar, Cesar, Colombia</p>
-              <p><strong>Contacto:</strong> +57 322 767 1829</p>
-              <p><strong>Horario:</strong> Lunes a Sábado 9:00 - 18:00</p>
-              <p><strong>Servicios:</strong> Envío a domicilio, cambios en 7 días, atención personalizada</p>
-              <p><strong>Redes:</strong> Instagram: @danielatorregroza</p>
+              <div style="text-align:center;padding:10px 8px;">
+                <h2 style="margin-bottom:6px;color:var(--primary)">Daniela Torregroza</h2>
+                <p style="margin:8px 0;font-weight:600">Carrera 27 # 10-50</p>
+                <p style="margin:8px 0;font-weight:600">Valledupar, Cesar - Colombia</p>
+                <p style="margin:8px 0;font-weight:600">+57 322 767 1829</p>
+                <p style="margin:8px 0;font-weight:600">Horario: Lun - Sáb / 9:00 - 18:00</p>
+                <p style="margin-top:10px;color:#666">Envío a domicilio · Cambios en 7 días · Atención personalizada</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Image viewer full-screen modal -->
         <div id="imageViewerModal" class="modal" aria-hidden="true">
           <div class="modal-content-wrapper viewer-wrapper">
             <div class="viewer-card">
