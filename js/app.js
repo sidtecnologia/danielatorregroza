@@ -450,8 +450,9 @@ const generateCategoryCarousel = () => {
     });
 };
 
-/* Collage render - NO repite imágenes.
-   - usa una selección única de hasta 16 imágenes distintas
+/* Collage render - ahora rellena todas las celdas (16) y usa celdas cuadradas
+   - si hay menos de 16 imágenes, repite de forma cíclica para que no queden huecos
+   - elimina spans aleatorios para garantizar un cuadrado perfecto
 */
 function renderCollage() {
     if (!collageGrid) return;
@@ -464,21 +465,18 @@ function renderCollage() {
 
     if (pool.length === 0) return;
 
-    // shuffle but ensure uniqueness by taking first N unique
     const shuffled = shuffleArray(pool.slice());
     const maxCells = 16;
-    const totalCells = Math.min(shuffled.length, maxCells);
+    const totalCells = maxCells;
 
     for (let idx = 0; idx < totalCells; idx++) {
-        const p = shuffled[idx];
+        const p = shuffled[idx % shuffled.length];
         const item = document.createElement('div');
         item.className = 'collage-item';
         item.setAttribute('data-product-id', p.id);
-        // spans aleatorios 1 o 2 pero evitando expandirse demasiadas veces
-        const colSpan = Math.random() > 0.85 ? 2 : 1;
-        const rowSpan = Math.random() > 0.85 ? 2 : 1;
-        item.style.gridColumn = `span ${colSpan}`;
-        item.style.gridRow = `span ${rowSpan}`;
+        // siempre span 1x1 para evitar huecos y que cada celda sea cuadrada
+        item.style.gridColumn = `span 1`;
+        item.style.gridRow = `span 1`;
         item.innerHTML = `<img src="${p.img}" loading="lazy" alt="collage">`;
         // click abre modal del producto
         item.addEventListener('click', (ev) => {
@@ -677,22 +675,35 @@ function showModal(modal) {
 function closeModal(modal) {
     modal.style.display = 'none';
     modal.setAttribute('aria-hidden', 'true');
-    // limpiar selección temporal
-    selectedSize = null;
-    selectedColor = null;
-    if (sizeOptionsContainer) sizeOptionsContainer.innerHTML = '';
-    if (colorOptionsContainer) colorOptionsContainer.innerHTML = '';
-    modalAddToCartBtn.disabled = true;
-    modalAddToCartBtn.setAttribute('aria-disabled', 'true');
+    // Limpiar selección temporal SOLO si cerramos el modal de producto
+    if (modal && modal.id === 'productModal') {
+        selectedSize = null;
+        selectedColor = null;
+        if (sizeOptionsContainer) sizeOptionsContainer.innerHTML = '';
+        if (colorOptionsContainer) colorOptionsContainer.innerHTML = '';
+        if (modalAddToCartBtn) {
+            modalAddToCartBtn.disabled = true;
+            modalAddToCartBtn.setAttribute('aria-disabled', 'true');
+        }
+    }
 }
 
+/* Añadimos un manejador más seguro:
+   - siempre cierra cuando se hace click en el botón .modal-close
+   - cierra con backdrop click solo si el modal permite backdrop close (dataset.backdropClose !== 'false')
+*/
 [productModal, cartModal, checkoutModal, orderSuccessModal, storeModal, imageViewerModal].forEach(modal => {
     if (!modal) return;
     modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeModal(modal);
-        }
         if (e.target.classList.contains('modal-close')) {
+            closeModal(modal);
+            return;
+        }
+        if (e.target === modal) {
+            // si dataset.backdropClose == 'false' entonces no cerramos
+            if (modal.dataset.backdropClose === 'false') {
+                return;
+            }
             closeModal(modal);
         }
     });
@@ -709,7 +720,10 @@ function openStoreModalFromLogo() {
     const rect = logoElement.getBoundingClientRect();
     const originX = rect.left + rect.width / 2;
     const originY = rect.top + rect.height / 2;
+    // set transform origin relative to viewport so the animation seems to come from the logo
     storeModalContent.style.transformOrigin = `${originX}px ${originY}px`;
+    // prevent closing on backdrop for this modal (user must close explicitly)
+    storeModal.dataset.backdropClose = 'false';
     // add entry animation class
     storeModal.classList.add('animate-from-logo');
     showModal(storeModal);
@@ -1262,7 +1276,7 @@ const loadConfigAndInitSupabase = async () => {
         console.error('Error FATAL al iniciar la aplicación:', error);
         
         const loadingMessage = document.createElement('div');
-        loadingMessage.style = 'position:fixed;top:0;left:0;width:100%;height:100%;background:white;display:flex;align-items:center;justify-content:center;color:red;font-weight:bold;text-align:center;padding:20px;z-index:9999;';
+        loadingMessage.style = 'position:fixed;top:0;left:0;width:100%;height:100%;background:white;display:flex;align-items:center;justify-content:center;color:red;font-weight:bold;text-align:center;[...]
         loadingMessage.textContent = 'ERROR DE INICIALIZACIÓN: No se pudo cargar la configuración de la tienda. Revisa la consola para más detalles (Faltan variables de entorno en Vercel).';
         document.body.appendChild(loadingMessage);
     }

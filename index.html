@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -234,16 +233,17 @@
           </div>
         </div>
 
-        <!-- Store modal (info about the store) -->
-        <div id="storeModal" class="modal" aria-hidden="true">
+        <!-- Store modal (info about the store). Not closable by clicking backdrop: user must close explicitly -->
+        <div id="storeModal" class="modal" aria-hidden="true" data-backdrop-close="false">
           <div class="modal-content-wrapper">
-            <div id="store-modal-content" class="checkout-modal-card store-modal-card">
+            <div id="store-modal-content" class="store-modal-card">
               <button class="modal-close" aria-label="Cerrar">&times;</button>
+              <!-- Simplified, centered info (sin subtitulos) -->
+              <img src="img/favicon.png" alt="Logo Tienda" />
               <h2>Tienda Daniela Torregroza</h2>
-              <p>Carrera 27 # 10-50, Valledupar, Cesar, Colombia</p>
+              <p>Carrera 27 # 10-50 · Valledupar · Cesar</p>
               <p>+57 322 767 1829</p>
               <p>Lunes a Sábado 9:00 - 18:00</p>
-              <p>Envío a domicilio, cambios en 7 días, atención personalizada</p>
             </div>
           </div>
         </div>
@@ -283,3 +283,5 @@
     <script type="module" src="js/app.js"></script>
 </body>
 </html>
+```
+
