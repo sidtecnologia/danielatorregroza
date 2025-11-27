@@ -1,11 +1,4 @@
-/**
- * @license
- * Copyright © 2025 Tecnología y Soluciones Informáticas. Todos los derechos reservados.
- *
- * Adaptado: Catalogo de Vestuario - selección obligatoria de talla y color en modal.
- * Cambios: Collage: cada imagen enlaza al producto respectivo y tiene efecto de ampliación al seleccionar.
- *         Modal: opciones de talla/color centradas y lectura de tallas/colores desde la BD (soporta arrays o CSV).
- */
+
 
 const { createClient } = supabase;
 
@@ -68,6 +61,20 @@ const termsConsentCheckbox = document.getElementById('terms-consent-checkbox');
 const sizeOptionsContainer = document.getElementById('size-options');
 const colorOptionsContainer = document.getElementById('color-options');
 
+const bannerCarousel = document.getElementById('banner-carousel');
+const bannerDots = document.getElementById('banner-dots');
+
+// New modals/elements
+const logoElement = document.querySelector('.brand-logo');
+const storeModal = document.getElementById('storeModal');
+const storeModalContent = document.getElementById('store-modal-content');
+const imageViewerModal = document.getElementById('imageViewerModal');
+const viewerImage = document.getElementById('viewer-image');
+const viewerPrev = document.getElementById('viewer-prev');
+const viewerNext = document.getElementById('viewer-next');
+const viewerClose = document.getElementById('viewer-close');
+
+let bannerCarouselState = null; // will hold internal carousel state when initialized
 
 // --- Funciones de Ayuda ---
 const money = (v) => {
@@ -83,97 +90,169 @@ const shuffleArray = (array) => {
     return array;
 };
 
-// --- Lógica del carrusel de banner (sin cambios) ---
-const bannerCarousel = document.getElementById('banner-carousel');
-const bannerDots = document.getElementById('banner-dots');
-if (bannerCarousel) {
-    const slides = document.querySelectorAll('.banner-slide');
-    let currentBanner = 0;
-    let bannerInterval;
-    const firstSlideClone = slides[0].cloneNode(true);
-    const lastSlideClone = slides[slides.length - 1].cloneNode(true);
-    bannerCarousel.appendChild(firstSlideClone);
-    bannerCarousel.insertBefore(lastSlideClone, slides[0]);
-    currentBanner = 1;
-    bannerCarousel.style.transform = `translateX(-${currentBanner * 100}%)`;
+// --- BANNER CAROUSEL (dynamic init) ---
+function initBannerCarousel(images = []) {
+    // clear previous state if any
+    if (!bannerCarousel) return;
+    bannerCarousel.innerHTML = '';
+    bannerDots.innerHTML = '';
+    if (!images || images.length === 0) {
+        // keep a placeholder slide
+        const slide = document.createElement('div');
+        slide.className = 'banner-slide';
+        slide.innerHTML = `<img src="img/favicon.png" alt="Promoción">`;
+        bannerCarousel.appendChild(slide);
+        return;
+    }
+
+    images.forEach(src => {
+        const slide = document.createElement('div');
+        slide.className = 'banner-slide';
+        slide.innerHTML = `<img src="${src}" alt="Promoción">`;
+        bannerCarousel.appendChild(slide);
+    });
+
+    // build dots
+    const slides = bannerCarousel.querySelectorAll('.banner-slide');
     slides.forEach((_, idx) => {
         const dot = document.createElement('div');
         dot.classList.add('banner-dot');
         if (idx === 0) dot.classList.add('active');
-        dot.addEventListener('click', () => goToSlide(idx + 1));
+        dot.addEventListener('click', () => {
+            if (!bannerCarouselState) return;
+            bannerCarouselState.goTo(idx);
+        });
         bannerDots.appendChild(dot);
     });
 
-    function updateBanner() {
-        bannerCarousel.style.transform = `translateX(-${currentBanner * 100}%)`;
-        const dotIndex = (currentBanner - 1 + slides.length) % slides.length;
-        document.querySelectorAll('.banner-dot').forEach((dot, idx) => {
-            dot.classList.toggle('active', idx === dotIndex);
-        });
+    // internal state to manage slides including clones like original implementation
+    if (bannerCarouselState && bannerCarouselState.destroy) {
+        bannerCarouselState.destroy();
     }
 
-    function goToSlide(idx) {
-        currentBanner = idx;
-        updateBanner();
-        resetInterval();
+    bannerCarouselState = createBannerState(bannerCarousel, slides, bannerDots);
+    bannerCarouselState.start();
+}
+
+function createBannerState(container, slidesNodeList, dotsContainer) {
+    let slides = Array.from(container.querySelectorAll('.banner-slide'));
+    // clone first and last to allow smooth loop
+    const firstClone = slides[0].cloneNode(true);
+    const lastClone = slides[slides.length - 1].cloneNode(true);
+    container.appendChild(firstClone);
+    container.insertBefore(lastClone, slides[0]);
+    // recompute slides collection
+    slides = Array.from(container.querySelectorAll('.banner-slide'));
+    let current = 1;
+    container.style.transform = `translateX(-${current * 100}%)`;
+    container.style.transition = 'transform 0.5s ease';
+
+    let intervalId = null;
+    const dots = Array.from(dotsContainer.querySelectorAll('.banner-dot'));
+
+    function update() {
+        container.style.transform = `translateX(-${current * 100}%)`;
+        const dotIndex = (current - 1 + dots.length) % dots.length;
+        dots.forEach((d, i) => d.classList.toggle('active', i === dotIndex));
     }
 
-    function nextBanner() {
-        currentBanner++;
-        updateBanner();
-        if (currentBanner >= slides.length + 1) {
+    function next() {
+        current++;
+        update();
+        if (current >= slides.length - 1) {
             setTimeout(() => {
-                bannerCarousel.style.transition = 'none';
-                currentBanner = 1;
-                bannerCarousel.style.transform = `translateX(-${currentBanner * 100}%)`;
-                setTimeout(() => {
-                    bannerCarousel.style.transition = 'transform 0.5s ease';
-                }, 50);
+                container.style.transition = 'none';
+                current = 1;
+                container.style.transform = `translateX(-${current * 100}%)`;
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        container.style.transition = 'transform 0.5s ease';
+                    }, 50);
+                });
             }, 500);
         }
     }
 
-    function resetInterval() {
-        clearInterval(bannerInterval);
-        bannerInterval = setInterval(nextBanner, 4000);
+    function goTo(idx) {
+        current = idx + 1; // account for clone at start
+        update();
+        resetInterval();
     }
+
+    function resetInterval() {
+        clearInterval(intervalId);
+        intervalId = setInterval(next, 4000);
+    }
+
+    // touch and mouse simple handlers
     let startX = 0;
-    bannerCarousel.addEventListener('touchstart', e => {
-        startX = e.touches[0].clientX;
-    });
-    bannerCarousel.addEventListener('touchend', e => {
-        let endX = e.changedTouches[0].clientX;
+    container.addEventListener('touchstart', e => startX = e.touches[0].clientX, { passive: true });
+    container.addEventListener('touchend', e => {
+        const endX = e.changedTouches[0].clientX;
         if (endX - startX > 50) {
-            currentBanner = (currentBanner - 1);
-            updateBanner();
-            resetInterval();
+            current = Math.max(1, current - 1);
+            update();
         } else if (startX - endX > 50) {
-            nextBanner();
-            resetInterval();
+            next();
         }
-    });
-    let isDown = false,
-        startXMouse;
-    bannerCarousel.addEventListener('mousedown', e => {
-        isDown = true;
-        startXMouse = e.pageX;
-    });
-    bannerCarousel.addEventListener('mouseup', e => {
+        resetInterval();
+    }, { passive: true });
+
+    let isDown = false, startXMouse;
+    container.addEventListener('mousedown', e => { isDown = true; startXMouse = e.pageX; });
+    container.addEventListener('mouseup', e => {
         if (!isDown) return;
-        let diff = e.pageX - startXMouse;
-        if (diff > 50) {
-            currentBanner = (currentBanner - 1);
-            updateBanner();
-        } else if (diff < -50) {
-            nextBanner();
-        }
+        const diff = e.pageX - startXMouse;
+        if (diff > 50) { current = Math.max(1, current - 1); update(); }
+        else if (diff < -50) { next(); }
         isDown = false;
         resetInterval();
     });
-    resetInterval();
+
+    return {
+        start: () => { resetInterval(); },
+        goTo,
+        destroy: () => {
+            clearInterval(intervalId);
+            // remove clones if exist
+            try {
+                // remove first and last clones safely
+                const nodes = container.querySelectorAll('.banner-slide');
+                if (nodes.length > slides.length) {
+                    // best effort
+                    container.innerHTML = '';
+                    slides.forEach(s => container.appendChild(s));
+                }
+            } catch (e) {}
+        }
+    };
 }
 
-// --- Funciones para renderizar productos (sin cambios importantes) ---
+/* Fetch banner images from supabase storage bucket 'images' path 'baner/' */
+async function fetchBannerImagesFromSupabase() {
+    if (!supabaseClient) return [];
+    try {
+        const { data: files, error } = await supabaseClient.storage.from('images').list('baner', { limit: 200, offset: 0 });
+        if (error) {
+            console.warn('No se pudieron listar imágenes del banner:', error.message || error);
+            return [];
+        }
+        if (!files || files.length === 0) return [];
+        // sort by name for predictable order
+        const sorted = files.slice().sort((a, b) => a.name.localeCompare(b.name));
+        const urls = sorted.map(f => {
+            const { data } = supabaseClient.storage.from('images').getPublicUrl(`baner/${f.name}`);
+            // data.publicUrl
+            return data?.publicUrl || '';
+        }).filter(Boolean);
+        return urls;
+    } catch (err) {
+        console.error('fetchBannerImagesFromSupabase err', err);
+        return [];
+    }
+}
+
+// --- Renderizado y tarjetas (sin romper lógica original) ---
 const generateProductCard = (p) => {
     let bestSellerTag = '';
     if (p.bestSeller) {
@@ -187,8 +266,11 @@ const generateProductCard = (p) => {
         stockClass = ' out-of-stock';
     }
 
+    // allow offer style classes (for offers grid visual variety)
+    const offerClass = p._offerStyle ? ` ${p._offerStyle}` : '';
+
     return `
-      <div class="product-card${stockClass}" data-product-id="${p.id}">
+      <div class="product-card${stockClass}${offerClass}" data-product-id="${p.id}">
         ${bestSellerTag}
         <div class="image-wrap">
           <img src="${p.image && p.image[0] ? p.image[0] : 'img/favicon.png'}" alt="${p.name}" class="product-image modal-trigger" data-id="${p.id}" loading="lazy" />
@@ -201,7 +283,7 @@ const generateProductCard = (p) => {
         <div class="product-info">
           <div>
             <div class="product-name">${p.name}</div>
-            <div class="product-description">${p.description}</div>
+            <div class="product-description">${p.description || ''}</div>
           </div>
           <div style="margin-top:8px">
             <div class="product-price">$${money(p.price)}</div>
@@ -351,6 +433,7 @@ function renderPagination(currentPage, totalPages, data, perPage) {
 }
 
 const generateCategoryCarousel = () => {
+    if (!categoryCarousel) return;
     categoryCarousel.innerHTML = '';
     const categories = Array.from(new Set(products.map(p => p.category))).map(c => ({ label: c }));
     const allItem = document.createElement('div');
@@ -361,42 +444,39 @@ const generateCategoryCarousel = () => {
     categories.forEach(c => {
         const el = document.createElement('div');
         el.className = 'category-item';
-        const fileName = `img/icons/${c.label.toLowerCase().replace(/\s+/g, '_')}.webp`;
+        const fileName = `img/icons/${(c.label || '').toLowerCase().replace(/\s+/g, '_')}.webp`;
         el.innerHTML = `<img class="category-image" src="${fileName}" alt="${c.label}" data-category="${c.label}"><span class="category-name">${c.label}</span>`;
         categoryCarousel.appendChild(el);
     });
 };
 
-/* Collage render:
-   - ahora mapea imagen -> producto (usa product.image[0] y product.id)
-   - cada imagen enlaza al producto correspondiente (abre modal)
-   - efecto de ampliación al hover y al seleccionar (breve)
+/* Collage render - NO repite imágenes.
+   - usa una selección única de hasta 16 imágenes distintas
 */
 function renderCollage() {
     if (!collageGrid) return;
     collageGrid.innerHTML = '';
 
-    // crear pool de objetos { id, img }
+    // pool de objetos { id, img }
     const pool = products
         .filter(p => p.image && p.image.length > 0)
         .map(p => ({ id: p.id, img: p.image[0] }));
 
     if (pool.length === 0) return;
 
+    // shuffle but ensure uniqueness by taking first N unique
     const shuffled = shuffleArray(pool.slice());
+    const maxCells = 16;
+    const totalCells = Math.min(shuffled.length, maxCells);
 
-    // numero de celdas (4x4)
-    const totalCells = 16;
-    let idx = 0;
-
-    while (idx < Math.min(shuffled.length, totalCells)) {
+    for (let idx = 0; idx < totalCells; idx++) {
         const p = shuffled[idx];
         const item = document.createElement('div');
         item.className = 'collage-item';
         item.setAttribute('data-product-id', p.id);
         // spans aleatorios 1 o 2 pero evitando expandirse demasiadas veces
-        const colSpan = Math.random() > 0.75 ? 2 : 1;
-        const rowSpan = Math.random() > 0.75 ? 2 : 1;
+        const colSpan = Math.random() > 0.85 ? 2 : 1;
+        const rowSpan = Math.random() > 0.85 ? 2 : 1;
         item.style.gridColumn = `span ${colSpan}`;
         item.style.gridRow = `span ${rowSpan}`;
         item.innerHTML = `<img src="${p.img}" loading="lazy" alt="collage">`;
@@ -407,24 +487,6 @@ function renderCollage() {
             setTimeout(() => item.classList.remove('collage-item-selected'), 260);
             const id = item.getAttribute('data-product-id');
             if (id) openProductModal(id);
-        });
-        collageGrid.appendChild(item);
-        idx++;
-    }
-
-    // rellenar si hay menos items que celdas
-    while (collageGrid.children.length < totalCells) {
-        const random = shuffled[Math.floor(Math.random() * shuffled.length)];
-        const item = document.createElement('div');
-        item.className = 'collage-item';
-        item.setAttribute('data-product-id', random.id);
-        item.style.gridColumn = `span 1`;
-        item.style.gridRow = `span 1`;
-        item.innerHTML = `<img src="${random.img}" loading="lazy" alt="collage">`;
-        item.addEventListener('click', () => {
-            item.classList.add('collage-item-selected');
-            setTimeout(() => item.classList.remove('collage-item-selected'), 260);
-            openProductModal(random.id);
         });
         collageGrid.appendChild(item);
     }
@@ -449,14 +511,53 @@ function parseOptionsField(field) {
     return [];
 }
 
-/* Búsqueda y UI (sin cambios funcionales) */
+/* Búsqueda y UI - ahora con búsqueda ampliada por múltiples campos */
+function productMatchesQuery(p, q) {
+    if (!q) return true;
+    const Q = q.toLowerCase();
+    // basic string fields
+    const fields = [
+        p.name,
+        p.description,
+        p.category,
+        p.brand,
+        p.marca,
+        p.sku,
+        (p.tags && Array.isArray(p.tags) ? p.tags.join(' ') : p.tags)
+    ].filter(Boolean).map(s => String(s).toLowerCase());
+
+    // sizes and colors: parse all possible fields
+    const sizes = parseOptionsField(p.sizes || p.size || p.size_options || []);
+    const colors = parseOptionsField(p.colors || p.color || p.color_options || []);
+
+    // numeric fields also considered (price)
+    const numericFields = [
+        p.price ? String(p.price) : ''
+    ];
+
+    // check presence
+    for (const f of fields) {
+        if (f.includes(Q)) return true;
+    }
+    for (const s of sizes) {
+        if (String(s).toLowerCase().includes(Q)) return true;
+    }
+    for (const c of colors) {
+        if (String(c).toLowerCase().includes(Q)) return true;
+    }
+    for (const n of numericFields) {
+        if (n.includes(Q)) return true;
+    }
+    return false;
+}
+
 searchInput.addEventListener('input', (e) => {
-    const q = e.target.value.trim().toLowerCase();
+    const q = e.target.value.trim();
     if (!q) {
         showDefaultSections();
         return;
     }
-    const filtered = products.filter(p => p.name.toLowerCase().includes(q) || (p.description && p.description.toLowerCase().includes(q)) || (p.category && p.category.toLowerCase().includes(q)));
+    const filtered = products.filter(p => productMatchesQuery(p, q));
     filteredSection.style.display = 'block';
     featuredSection.style.display = 'none';
     offersSection.style.display = 'none';
@@ -469,10 +570,18 @@ const showDefaultSections = () => {
     offersSection.style.display = 'block';
     filteredSection.style.display = 'none';
     const featured = shuffleArray(products.filter(p => p.featured)).slice(0, 25);
-    const offers = shuffleArray(products.filter(p => p.isOffer)).slice(0, 25);
+
+    // offers: add visual variety without changing product data (assign class)
+    const offers = shuffleArray(products.filter(p => p.isOffer)).slice(0, 25).map((p, idx) => {
+        const clone = Object.assign({}, p);
+        // 3 styles rotating
+        clone._offerStyle = `offer-style-${(idx % 3) + 1}`;
+        return clone;
+    });
     renderProducts(featuredContainer, featured, 1, 25, false);
     renderProducts(offersGrid, offers, 1, 25, false);
     renderCollage();
+    generateCategoryCarousel();
 };
 
 categoryCarousel.addEventListener('click', (ev) => {
@@ -495,6 +604,7 @@ categoryCarousel.addEventListener('click', (ev) => {
 (function makeCarouselDraggable() {
     let isDown = false,
         startX, scrollLeft;
+    if (!categoryCarousel) return;
     categoryCarousel.addEventListener('mousedown', (e) => {
         isDown = true;
         startX = e.pageX - categoryCarousel.offsetLeft;
@@ -541,6 +651,21 @@ document.addEventListener('click', (e) => {
         addToCart(currentProduct.id, qty, selectedSize, selectedColor);
         closeModal(productModal);
     }
+
+    // Open store modal when clicking logo
+    if (e.target === logoElement || e.target.closest('.brand')) {
+        if (logoElement) openStoreModalFromLogo();
+    }
+
+    // If clicking inside product carousel to enlarge image
+    if (e.target.closest('.carousel-image')) {
+        const imgNodes = Array.from(carouselImagesContainer.querySelectorAll('.carousel-image'));
+        const clicked = e.target.closest('.carousel-image');
+        const idx = imgNodes.indexOf(clicked);
+        if (idx >= 0) {
+            openImageViewer(imgNodes.map(i => i.src), idx);
+        }
+    }
 });
 
 // --- Lógica de Modales ---
@@ -561,7 +686,8 @@ function closeModal(modal) {
     modalAddToCartBtn.setAttribute('aria-disabled', 'true');
 }
 
-[productModal, cartModal, checkoutModal, orderSuccessModal].forEach(modal => {
+[productModal, cartModal, checkoutModal, orderSuccessModal, storeModal, imageViewerModal].forEach(modal => {
+    if (!modal) return;
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             closeModal(modal);
@@ -572,16 +698,36 @@ function closeModal(modal) {
     });
 });
 
-closeSuccessBtn.addEventListener('click', () => {
+closeSuccessBtn && closeSuccessBtn.addEventListener('click', () => {
     closeModal(orderSuccessModal);
 });
 
+// --- Store Modal (opens from logo with origin animation) ---
+function openStoreModalFromLogo() {
+    if (!storeModal) return;
+    // compute origin based on logo center
+    const rect = logoElement.getBoundingClientRect();
+    const originX = rect.left + rect.width / 2;
+    const originY = rect.top + rect.height / 2;
+    storeModalContent.style.transformOrigin = `${originX}px ${originY}px`;
+    // add entry animation class
+    storeModal.classList.add('animate-from-logo');
+    showModal(storeModal);
+    setTimeout(() => storeModal.classList.remove('animate-from-logo'), 600);
+}
+
+function closeStoreModal() {
+    if (!storeModal) return;
+    closeModal(storeModal);
+}
+
+// --- Product modal open/update ---
 function openProductModal(id) {
     const product = products.find(p => p.id === id);
     if (!product) return;
     currentProduct = product;
     modalProductName.textContent = product.name;
-    modalProductDescription.textContent = product.description;
+    modalProductDescription.textContent = product.description || '';
     modalProductPrice.textContent = `$${money(product.price)}`;
     qtyInput.value = 1;
     selectedSize = null;
@@ -706,6 +852,60 @@ function updateCarouselPosition() {
 }
 window.addEventListener('resize', updateCarouselPosition);
 
+// --- Image Viewer Fullscreen (new) ---
+function openImageViewer(images = [], startIndex = 0) {
+    if (!imageViewerModal) return;
+    imageViewerModal.dataset.images = JSON.stringify(images);
+    imageViewerModal.dataset.index = String(startIndex || 0);
+    updateViewer();
+    showModal(imageViewerModal);
+    setTimeout(() => viewerImage.classList.add('viewer-show'), 20);
+}
+
+function updateViewer() {
+    const images = JSON.parse(imageViewerModal.dataset.images || '[]');
+    let idx = parseInt(imageViewerModal.dataset.index || '0', 10);
+    if (idx < 0) idx = 0;
+    if (idx >= images.length) idx = images.length - 1;
+    imageViewerModal.dataset.index = String(idx);
+    viewerImage.src = images[idx] || '';
+    // hide/show arrows
+    viewerPrev.style.display = idx > 0 ? 'flex' : 'none';
+    viewerNext.style.display = idx < images.length - 1 ? 'flex' : 'none';
+}
+
+viewerPrev && viewerPrev.addEventListener('click', (e) => {
+    e.stopPropagation();
+    let idx = parseInt(imageViewerModal.dataset.index || '0', 10);
+    if (idx > 0) idx--;
+    imageViewerModal.dataset.index = String(idx);
+    updateViewer();
+});
+
+viewerNext && viewerNext.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const images = JSON.parse(imageViewerModal.dataset.images || '[]');
+    let idx = parseInt(imageViewerModal.dataset.index || '0', 10);
+    if (idx < images.length - 1) idx++;
+    imageViewerModal.dataset.index = String(idx);
+    updateViewer();
+});
+
+viewerClose && viewerClose.addEventListener('click', () => {
+    viewerImage.classList.remove('viewer-show');
+    setTimeout(() => closeModal(imageViewerModal), 200);
+});
+
+// keyboard support for viewer
+document.addEventListener('keydown', (e) => {
+    if (imageViewerModal && imageViewerModal.style.display === 'flex') {
+        if (e.key === 'ArrowLeft') viewerPrev.click();
+        if (e.key === 'ArrowRight') viewerNext.click();
+        if (e.key === 'Escape') viewerClose.click();
+    }
+});
+
+// --- Cart and Checkout logic (unchanged) ---
 function updateCart() {
     cartItemsContainer.innerHTML = '';
     if (cart.length === 0) {
@@ -1047,6 +1247,10 @@ const loadConfigAndInitSupabase = async () => {
         supabaseClient = createClient(SB_URL, SB_ANON_KEY);
 
         products = await fetchProductsFromSupabase();
+        // try to fetch banner images from storage and init carousel
+        const bannerImages = await fetchBannerImagesFromSupabase();
+        initBannerCarousel(bannerImages);
+
         if (products.length > 0) {
             showDefaultSections();
             generateCategoryCarousel();
@@ -1058,7 +1262,7 @@ const loadConfigAndInitSupabase = async () => {
         console.error('Error FATAL al iniciar la aplicación:', error);
         
         const loadingMessage = document.createElement('div');
-        loadingMessage.style = 'position:fixed;top:0;left:0;width:100%;height:100%;background:white;display:flex;align-items:center;justify-content:center;color:red;font-weight:bold;text-align:center;padding:1rem';
+        loadingMessage.style = 'position:fixed;top:0;left:0;width:100%;height:100%;background:white;display:flex;align-items:center;justify-content:center;color:red;font-weight:bold;text-align:center;padding:20px;z-index:9999;';
         loadingMessage.textContent = 'ERROR DE INICIALIZACIÓN: No se pudo cargar la configuración de la tienda. Revisa la consola para más detalles (Faltan variables de entorno en Vercel).';
         document.body.appendChild(loadingMessage);
     }

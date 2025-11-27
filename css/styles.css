@@ -8,6 +8,9 @@
   --shadow: 0 6px 18px rgba(0, 0, 0, .08);
   --text: #333;
   --fs-text-face-body: "Poppins", Helvetica, sans-serif;
+  --offer-1-bg: linear-gradient(135deg,#fff4f9,#ffeef5);
+  --offer-2-bg: linear-gradient(135deg,#f0f9ff,#e6f7ff);
+  --offer-3-bg: linear-gradient(135deg,#f9fff4,#efffe8);
 }
 
 /* Base and Reset */
@@ -65,6 +68,7 @@ body {
   width: 44px;
   height: 44px;
   object-fit: contain;
+  cursor: pointer;
 }
 
 .brand-title {
@@ -136,20 +140,26 @@ body {
 .banner-slide {
   max-height: 355px;
   min-width: 100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
 }
 
 .banner-slide img {
   width: 100%;
   height: 100%;
+  object-fit:cover;
 }
 
 .banner-dots {
   position: absolute;
-  bottom: 93%;
+  bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   gap: 6px;
+  z-index: 10;
 }
 
 .banner-dot {
@@ -158,13 +168,14 @@ body {
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.6);
   cursor: pointer;
-  transition: background 0.3s;
+  transition: background 0.3s, transform 0.25s;
 }
 
 .banner-dot.active {
   border-radius: 20px;
   width: 20px;
   background: var(--primary);
+  transform: scale(1.06);
 }
 
 /* ESTILOS DE MODAL */
@@ -203,6 +214,84 @@ body {
   padding: 0;
   max-width: 780px;
   overflow: hidden;
+}
+
+/* Store modal - origin animation helper */
+.store-modal-card {
+  transition: transform 0.45s cubic-bezier(.2,.9,.3,1), opacity 0.35s;
+  transform: scale(0.96);
+  opacity: 0;
+}
+.modal.animate-from-logo .store-modal-card {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* Viewer modal styles */
+.viewer-wrapper {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+}
+.viewer-card {
+  position: relative;
+  width: 100%;
+  max-width: 920px;
+  height: 80vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: transparent;
+  box-shadow: none;
+}
+.viewer-card img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 8px;
+  transition: transform .18s ease, opacity .18s ease;
+  transform: scale(.98);
+  opacity: 0;
+}
+.viewer-show {
+  transform: scale(1);
+  opacity: 1 !important;
+}
+.viewer-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  border: none;
+  width: 56px;
+  height: 56px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius: 50%;
+  font-size: 22px;
+  cursor: pointer;
+  z-index: 2200;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+.viewer-prev { left: 10px; }
+.viewer-next { right: 10px; }
+.viewer-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width:48px;
+  height:48px;
+  font-size: 26px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.95);
+  color: var(--accent);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index: 2300;
 }
 
 /* Categories Carousel */
@@ -338,6 +427,11 @@ body {
   flex-direction: column;
   cursor: default;
   min-height: 320px;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.product-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 14px 30px rgba(0,0,0,0.10);
 }
 
 .product-name {
@@ -453,7 +547,7 @@ body {
 
 .modal-close {
   position: absolute;
-  top: 1px;
+  top: 8px;
   right: 10px;
   font-size: 26px;
   border: none;
@@ -461,6 +555,17 @@ body {
   cursor: pointer;
   color: #333;
   z-index: 20;
+  width:40px;
+  height:40px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:8px;
+  transition: background .12s ease, transform .12s;
+}
+.modal-close:hover {
+  background: rgba(0,0,0,0.06);
+  transform: translateY(-2px);
 }
 
 /* Carousel Modal*/
@@ -483,19 +588,25 @@ body {
   min-width: 100%;
   height: 100%;
   object-fit: contain;
+  cursor: zoom-in;
 }
 
 .carousel-btn {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(0, 0, 0, .35);
+  background: rgba(255, 255, 255, .92);
   border: none;
-  color: #fff;
-  padding: 8px;
+  color: var(--accent);
+  padding: 10px;
   border-radius: 50%;
   cursor: pointer;
   z-index: 6;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:20px;
 }
 
 .prev-btn {
@@ -995,98 +1106,69 @@ body {
   }
 }
 
+/* Offer visual variation classes (keeps product layout/behavior) */
+.offer-style-1 {
+  background: var(--offer-1-bg);
+  border: 1px solid rgba(159,39,244,0.06);
+}
+.offer-style-2 {
+  background: var(--offer-2-bg);
+  border: 1px solid rgba(37,211,102,0.06);
+}
+.offer-style-3 {
+  background: var(--offer-3-bg);
+  border: 1px solid rgba(0,123,255,0.06);
+}
+
+/* Slight overlay for offer cards to keep contrast readable */
+.offer-style-1 .product-info,
+.offer-style-2 .product-info,
+.offer-style-3 .product-info {
+  background: transparent;
+}
+
+/* Nuevo estilo para las flechas y botones del modal para que sean más visibles */
+.carousel-btn i {
+  font-size: 18px;
+  color: var(--accent);
+}
+.modal-close {
+  background: rgba(255,255,255,0.95);
+}
+
+/* ======================
+   Extra small helpers
+   ====================== */
 .image-wrap {
   position: relative;
   display: block;
-  overflow: hidden;
-  border-radius: 10px 10px 0 0; /* coincide con la tarjeta */
 }
-
-/* El hint: por defecto oculto, aparece con una animación fundida/pulse */
 .image-hint {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%) scale(0.98);
-  background: rgba(0, 0, 0, 0.64);
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 20px;
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 0.86rem;
+  left: 8px;
+  bottom: 8px;
+  background: rgba(255,255,255,0.92);
+  padding: 4px 8px;
+  border-radius: 6px;
+  display:flex;
+  gap:6px;
+  align-items:center;
+  font-size:12px;
+  transform: translateY(6px);
   opacity: 0;
-  pointer-events: none;
-  transition: opacity 260ms ease, transform 360ms cubic-bezier(.2,.9,.3,1);
-  will-change: opacity, transform;
-  z-index: 8;
+  transition: transform .35s, opacity .25s;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
 }
-
-/* Icono dentro del hint (usa FontAwesome ya cargado) */
-.image-hint i {
-  font-size: 1rem;
-  color: #fff;
-}
-
-/* Clase que activa la animación "fundida/pulse" temporal */
 .image-hint.show-hint {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-  animation: hint-pulse 1100ms ease-in-out 1;
+  transform: translateY(0);
+  opacity:1;
 }
 
-/* Si el usuario pasa el cursor o toca la imagen, mostramos el hint (interacción) */
-.image-wrap:hover .image-hint,
-.image-wrap:focus-within .image-hint {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-  transition-duration: 160ms;
-}
-
-/* animación suave tipo fade + pequeño movimiento */
-@keyframes hint-pulse {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -42%) scale(0.96);
-  }
-  20% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.02);
-  }
-  60% {
-    opacity: 1;
-    transform: translate(-50%, -52%) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -62%) scale(0.98);
-  }
-}
-
-/* Evitar movimientos para usuarios que prefieren reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .image-hint,
-  .image-hint.show-hint {
-    animation: none;
-    transition: none;
-  }
-}
-
-/* Responsive: asegurar que no tape elementos importantes en móviles */
-@media (max-width: 420px) {
-  .image-hint {
-    font-size: 0.8rem;
-    padding: 6px 8px;
-  }
-  .image-hint i { font-size: 0.92rem; }
-}
-
-/* Evitar movimientos para usuarios que prefieren reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .image-hint,
-  .image-hint.show-hint {
-    animation: none;
-    transition: none;
-  }
+/* ======================
+   Responsive tweaks for viewer
+   ====================== */
+@media (max-width: 720px) {
+  .viewer-card { max-width: 94%; height: 70vh; }
+  .viewer-nav { width:44px; height:44px; font-size:18px; }
+  .viewer-close { width:40px; height:40px; font-size:20px; }
 }

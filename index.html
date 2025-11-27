@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -84,13 +85,8 @@
         <section class="main-carousel-wrapper">
 
         <section class="banner-section">
-          <div class="banner-carousel" id="banner-carousel">
-            <div class="banner-slide"><img src="https://fihiksdyshhpydzanwlf.supabase.co/storage/v1/object/public/images/baner/baner1.webp" alt="Promoción 1"></div>
-            <div class="banner-slide"><img src="https://fihiksdyshhpydzanwlf.supabase.co/storage/v1/object/public/images/baner/baner2.webp" alt="Promoción 2"></div>
-            <div class="banner-slide"><img src="https://fihiksdyshhpydzanwlf.supabase.co/storage/v1/object/public/images/baner/baner3.webp" alt="Promoción 3"></div>
-            <div class="banner-slide"><img src="https://fihiksdyshhpydzanwlf.supabase.co/storage/v1/object/public/images/baner/baner4.webp" alt="Promoción 4"></div>
-            <div class="banner-slide"><img src="https://fihiksdyshhpydzanwlf.supabase.co/storage/v1/object/public/images/baner/baner5.webp" alt="Promoción 5"></div>
-            <div class="banner-slide"><img src="https://fihiksdyshhpydzanwlf.supabase.co/storage/v1/object/public/images/baner/baner6.webp" alt="Promoción 6"></div>
+          <div class="banner-carousel" id="banner-carousel" aria-hidden="false">
+            <!-- Slides will be injected from JS loading bucket/images/baner/ -->
           </div>
           <div class="banner-dots" id="banner-dots"></div>
         </section>
@@ -147,9 +143,9 @@
                 <div class="modal-card">
                     <button class="modal-close close-button" aria-label="Cerrar">&times;</button>
                     <div class="carousel-container">
-                        <button id="prev-btn" class="carousel-btn prev-btn"><i class="fas fa-circle-arrow-left"></i></button>
+                        <button id="prev-btn" class="carousel-btn prev-btn"><i class="fas fa-chevron-left"></i></button>
                         <div id="carousel-images-container" class="carousel-images-container"></div>
-                        <button id="next-btn" class="carousel-btn next-btn"><i class="fas fa-circle-arrow-right"></i></button>
+                        <button id="next-btn" class="carousel-btn next-btn"><i class="fas fa-chevron-right"></i></button>
                     </div>
                     <div id="image-modal-caption" class="modal-caption">
                         <h3 id="modal-product-name" class="product-title"></h3>
@@ -234,6 +230,34 @@
               <p>Gracias por tu compra.</p>
               <button id="whatsapp-btn" class="checkout-btn"><i class="fab fa-whatsapp"></i> Confirmar pago</button>
               <button id="close-success-btn" class="add-to-cart-btn" style="background:#666">Regresar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Store modal (info about the store) -->
+        <div id="storeModal" class="modal" aria-hidden="true">
+          <div class="modal-content-wrapper">
+            <div id="store-modal-content" class="checkout-modal-card store-modal-card">
+              <button class="modal-close" aria-label="Cerrar">&times;</button>
+              <h2>Daniela Torregroza - Información de la Tienda</h2>
+              <p><strong>Nombre:</strong> Daniela Torregroza</p>
+              <p><strong>Ubicación:</strong> Carrera 27 # 10-50, Valledupar, Cesar, Colombia</p>
+              <p><strong>Contacto:</strong> +57 322 767 1829</p>
+              <p><strong>Horario:</strong> Lunes a Sábado 9:00 - 18:00</p>
+              <p><strong>Servicios:</strong> Envío a domicilio, cambios en 7 días, atención personalizada</p>
+              <p><strong>Redes:</strong> Instagram: @danielatorregroza</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Image viewer full-screen modal -->
+        <div id="imageViewerModal" class="modal" aria-hidden="true">
+          <div class="modal-content-wrapper viewer-wrapper">
+            <div class="viewer-card">
+              <button id="viewer-close" class="modal-close viewer-close" aria-label="Cerrar">&times;</button>
+              <button id="viewer-prev" class="viewer-nav viewer-prev" aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>
+              <img id="viewer-image" src="" alt="Imagen ampliada" />
+              <button id="viewer-next" class="viewer-nav viewer-next" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></button>
             </div>
           </div>
         </div>
