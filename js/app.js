@@ -1,5 +1,3 @@
-
-
 const { createClient } = supabase;
 
 let SB_URL = null;
@@ -1275,8 +1273,9 @@ const loadConfigAndInitSupabase = async () => {
     } catch (error) {
         console.error('Error FATAL al iniciar la aplicación:', error);
         
+        // Mostrar aviso de error sencillo y seguro (sin caracteres inválidos)
         const loadingMessage = document.createElement('div');
-        loadingMessage.style = 'position:fixed;top:0;left:0;width:100%;height:100%;background:white;display:flex;align-items:center;justify-content:center;color:red;font-weight:bold;text-align:center;[...]
+        loadingMessage.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;display:flex;align-items:center;justify-content:center;color:#a00;font-weight:bold;text-align:center;padding:16px;z-index:99999;';
         loadingMessage.textContent = 'ERROR DE INICIALIZACIÓN: No se pudo cargar la configuración de la tienda. Revisa la consola para más detalles (Faltan variables de entorno en Vercel).';
         document.body.appendChild(loadingMessage);
     }
