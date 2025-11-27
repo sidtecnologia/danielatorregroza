@@ -2,9 +2,6 @@
  * @license
  * Copyright © 2025 Tecnología y Soluciones Informáticas. Todos los derechos reservados.
  *
- * Adaptado: Catalogo de Vestuario - selección obligatoria de talla y color en modal.
- * Cambios: Collage: cada imagen enlaza al producto respectivo y tiene efecto de ampliación al seleccionar.
- *         Modal: opciones de talla/color centradas y lectura de tallas/colores desde la BD (soporta arrays o CSV).
  */
 
 const { createClient } = supabase;
@@ -371,6 +368,8 @@ const generateCategoryCarousel = () => {
    - ahora mapea imagen -> producto (usa product.image[0] y product.id)
    - cada imagen enlaza al producto correspondiente (abre modal)
    - efecto de ampliación al hover y al seleccionar (breve)
+   - no repite imágenes: usa pool único; si hay menos imágenes que celdas, reduce celdas.
+   - ajusta tamaño de celdas para ser cuadrados en función del ancho y columnas.
 */
 function renderCollage() {
     if (!collageGrid) return;
@@ -383,22 +382,38 @@ function renderCollage() {
 
     if (pool.length === 0) return;
 
+    // calcular columnas según ancho
+    const containerWidth = collageGrid.clientWidth || collageGrid.offsetWidth || window.innerWidth;
+    // prefer por defecto 4 columnas en desktop, 3 tablet, 2 mobile
+    let columns = 4;
+    if (containerWidth < 480) columns = 2;
+    else if (containerWidth < 900) columns = 3;
+    else columns = 4;
+
+    // ajustar grid-template-columns y row height para que las celdas sean cuadradas
+    collageGrid.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+    // calcular ancho de cada columna en px
+    const gap = 0; // collage-grid has no gap in css
+    const colWidth = Math.floor((containerWidth - (columns - 1) * gap) / columns);
+    collageGrid.style.gridAutoRows = `${colWidth}px`;
+
     const shuffled = shuffleArray(pool.slice());
 
-    // numero de celdas (4x4)
-    const totalCells = 16;
-    let idx = 0;
+    // numero de celdas (prefiere 4x4 pero se adapta al número de elementos únicos)
+    const defaultTotalCells = 16;
+    const totalCells = Math.min(defaultTotalCells, shuffled.length);
 
-    while (idx < Math.min(shuffled.length, totalCells)) {
+    for (let idx = 0; idx < totalCells; idx++) {
         const p = shuffled[idx];
         const item = document.createElement('div');
         item.className = 'collage-item';
         item.setAttribute('data-product-id', p.id);
         // spans aleatorios 1 o 2 pero evitando expandirse demasiadas veces
-        const colSpan = Math.random() > 0.75 ? 2 : 1;
-        const rowSpan = Math.random() > 0.75 ? 2 : 1;
-        item.style.gridColumn = `span ${colSpan}`;
-        item.style.gridRow = `span ${rowSpan}`;
+        const colSpan = Math.random() > 0.8 ? 2 : 1;
+        const rowSpan = Math.random() > 0.8 ? 2 : 1;
+        // evitar que ocupe más columnas que las disponibles
+        item.style.gridColumn = `span ${Math.min(colSpan, columns)}`;
+        item.style.gridRow = `span ${Math.min(rowSpan, 2)}`;
         item.innerHTML = `<img src="${p.img}" loading="lazy" alt="collage">`;
         // click abre modal del producto
         item.addEventListener('click', (ev) => {
@@ -409,31 +424,12 @@ function renderCollage() {
             if (id) openProductModal(id);
         });
         collageGrid.appendChild(item);
-        idx++;
     }
 
-    // rellenar si hay menos items que celdas
-    while (collageGrid.children.length < totalCells) {
-        const random = shuffled[Math.floor(Math.random() * shuffled.length)];
-        const item = document.createElement('div');
-        item.className = 'collage-item';
-        item.setAttribute('data-product-id', random.id);
-        item.style.gridColumn = `span 1`;
-        item.style.gridRow = `span 1`;
-        item.innerHTML = `<img src="${random.img}" loading="lazy" alt="collage">`;
-        item.addEventListener('click', () => {
-            item.classList.add('collage-item-selected');
-            setTimeout(() => item.classList.remove('collage-item-selected'), 260);
-            openProductModal(random.id);
-        });
-        collageGrid.appendChild(item);
-    }
+    // Re-layout: si hay espacio vacío (por spans) el grid se ajustará; no se rellenan duplicados
 }
 
-/* Helper para leer tallas/colores de acuerdo a la estructura de la BD:
-   - soporta product.sizes (array), product.size (string con CSV o single)
-   - soporta product.colors (array), product.color (string con CSV o single)
-*/
+// Helper para leer tallas/colores de acuerdo a la estructura de la BD:
 function parseOptionsField(field) {
     if (!field) return [];
     if (Array.isArray(field)) return field;
@@ -515,7 +511,7 @@ categoryCarousel.addEventListener('click', (ev) => {
         scrollLeft = categoryCarousel.scrollLeft;
     });
     categoryCarousel.addEventListener('touchmove', (e) => {
-        const x = e.touches[0].pageX - categoryCarousel.offsetLeft;
+        const x = e.touches[0].pageX - category.carousel.offsetLeft;
         const walk = (x - startX) * 1.2;
         categoryCarousel.scrollLeft = scrollLeft - walk;
     });
@@ -1038,31 +1034,4 @@ const loadConfigAndInitSupabase = async () => {
         const config = await response.json();
         
         if (!config.url || !config.anonKey) {
-             throw new Error("El API Route no retornó las claves de DB. Revisa las Variables de Entorno en Vercel.");
-        }
-
-        SB_URL = config.url;
-        SB_ANON_KEY = config.anonKey;
-
-        supabaseClient = createClient(SB_URL, SB_ANON_KEY);
-
-        products = await fetchProductsFromSupabase();
-        if (products.length > 0) {
-            showDefaultSections();
-            generateCategoryCarousel();
-        } else {
-            renderCollage();
-        }
-        updateCart();
-    } catch (error) {
-        console.error('Error FATAL al iniciar la aplicación:', error);
-        
-        const loadingMessage = document.createElement('div');
-        loadingMessage.style = 'position:fixed;top:0;left:0;width:100%;height:100%;background:white;display:flex;align-items:center;justify-content:center;color:red;font-weight:bold;text-align:center;padding:1rem';
-        loadingMessage.textContent = 'ERROR DE INICIALIZACIÓN: No se pudo cargar la configuración de la tienda. Revisa la consola para más detalles (Faltan variables de entorno en Vercel).';
-        document.body.appendChild(loadingMessage);
-    }
-};
-
-
-document.addEventListener('DOMContentLoaded', loadConfigAndInitSupabase);
+             throw new Error("El API Route no retornó las claves de DB. Revisa las Variables de Entorno en Vercel
