@@ -2,6 +2,7 @@
   --primary: #9f27f4;
   --secondary: #ffb9e5;
   --accent: #212529;
+  --tenue: #feb9e540;
   --bg: #f8f9fa;
   --card-bg: #FFFFFF;
   --radius: 10px;
@@ -605,7 +606,7 @@ body {
   right: 10px;
   font-size: 26px;
   border: none;
-  background: transparent;
+  background: var(--tenue);
   cursor: pointer;
   color: #333;
   z-index: 20;
