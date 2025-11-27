@@ -273,7 +273,6 @@ const generateProductCard = (p) => {
         <div class="image-wrap">
           <img src="${p.image && p.image[0] ? p.image[0] : 'img/favicon.png'}" alt="${p.name}" class="product-image modal-trigger" data-id="${p.id}" loading="lazy" />
           <div class="image-hint" aria-hidden="true">
-            <i class="fas fa-hand-point-up" aria-hidden="true"></i>
             <span>Presiona para ver</span>
           </div>
         </div>
@@ -313,33 +312,7 @@ function renderProducts(container, data, page = 1, perPage = 20, withPagination 
         if (paginationContainer) paginationContainer.innerHTML = '';
     }
 
-    // Tras renderizar, mostramos hints pequeños
-    try {
-        showImageHints(container);
-    } catch (e) {}
-}
-
-function showImageHints(container) {
-    try {
-        const hints = container.querySelectorAll('.image-hint');
-        const max = Math.min(6, hints.length);
-        for (let i = 0; i < max; i++) {
-            const h = hints[i];
-            h.classList.add('show-hint');
-            h.style.transitionDelay = `${i * 120}ms`;
-        }
-        setTimeout(() => {
-            for (let i = 0; i < max; i++) {
-                const h = hints[i];
-                if (h) {
-                    h.classList.remove('show-hint');
-                    h.style.transitionDelay = '';
-                }
-            }
-        }, 2200);
-    } catch (err) {
-        console.warn('showImageHints err', err);
-    }
+    // NO mostramos hints automáticamente aquí — el hint aparece al hover o cuando la tarjeta se activa (clic)
 }
 
 function enableTouchHints() {
@@ -351,47 +324,37 @@ function enableTouchHints() {
     const card = e.target.closest('.product-card');
     if (!card) return;
     if (e.target.closest('button, a, input, textarea, select')) return;
-    const hint = card.querySelector('.image-hint');
-    if (!hint) return;
-    hint.classList.add('show-hint');
-    if (card._hintTimeout) {
-      clearTimeout(card._hintTimeout);
-      card._hintTimeout = null;
-    }
-    card._hintTimeout = setTimeout(() => {
-      hint.classList.remove('show-hint');
-      card._hintTimeout = null;
-    }, 2200);
+
+    // marcar la tarjeta como activa brevemente para mostrar el hint en touch
+    card.classList.add('active');
+    if (card._touchTimeout) clearTimeout(card._touchTimeout);
+    card._touchTimeout = setTimeout(() => {
+      card.classList.remove('active');
+      card._touchTimeout = null;
+    }, 900);
+
     lastTouchedCard = card;
   }
 
   function onTouchMove() {
     lastTouchMoved = true;
     if (lastTouchedCard) {
-      const h = lastTouchedCard.querySelector('.image-hint');
-      if (h) h.classList.remove('show-hint');
-      if (lastTouchedCard._hintTimeout) {
-        clearTimeout(lastTouchedCard._hintTimeout);
-        lastTouchedCard._hintTimeout = null;
+      if (lastTouchedCard._touchTimeout) {
+        clearTimeout(lastTouchedCard._touchTimeout);
+        lastTouchedCard._touchTimeout = null;
       }
+      lastTouchedCard.classList.remove('active');
       lastTouchedCard = null;
     }
   }
 
   function onTouchEnd() {
     if (!lastTouchedCard) return;
-    const h = lastTouchedCard.querySelector('.image-hint');
-    if (h && !lastTouchMoved) {
-      setTimeout(() => {
-        h.classList.remove('show-hint');
-      }, 700);
-    } else {
-      if (h) h.classList.remove('show-hint');
+    if (lastTouchedCard._touchTimeout) {
+      clearTimeout(lastTouchedCard._touchTimeout);
+      lastTouchedCard._touchTimeout = null;
     }
-    if (lastTouchedCard && lastTouchedCard._hintTimeout) {
-      clearTimeout(lastTouchedCard._hintTimeout);
-      lastTouchedCard._hintTimeout = null;
-    }
+    lastTouchedCard.classList.remove('active');
     lastTouchedCard = null;
   }
 
@@ -448,9 +411,11 @@ const generateCategoryCarousel = () => {
     });
 };
 
-/* Collage render - ahora rellena todas las celdas (16) y usa celdas cuadradas
-   - si hay menos de 16 imágenes, repite de forma cíclica para que no queden huecos
-   - elimina spans aleatorios para garantizar un cuadrado perfecto
+/*
+ Collage render (mosaico aleatorio, sin repetir imágenes):
+ - grid 4x4 (16 celdas)
+ - intento colocar cada imagen con span aleatorio (1 o 2) sin salirse ni sobreescribir ocupadas
+ - se usan imágenes únicas (hasta 16)
 */
 function renderCollage() {
     if (!collageGrid) return;
@@ -464,26 +429,93 @@ function renderCollage() {
     if (pool.length === 0) return;
 
     const shuffled = shuffleArray(pool.slice());
-    const maxCells = 16;
-    const totalCells = maxCells;
 
-    for (let idx = 0; idx < totalCells; idx++) {
-        const p = shuffled[idx % shuffled.length];
+    // Grid 4x4 occupancy matrix
+    const cols = 4, rows = 4;
+    const occupancy = Array.from({ length: rows }, () => Array(cols).fill(false));
+
+    const placed = [];
+    let imgIndex = 0;
+
+    // algoritmo: recorremos posiciones por filas/columnas buscando el primer lugar libre y
+    // tratamos de colocar la siguiente imagen con un span aleatorio (1 o 2), validando ajuste.
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            if (occupancy[r][c]) continue;
+            if (imgIndex >= shuffled.length) break; // ya no hay más imágenes únicas
+            // intentar spans aleatorios: probamos tamaños grandes primero con baja probabilidad
+            const trySizes = [
+                [2,2],
+                [2,1],
+                [1,2],
+                [1,1]
+            ];
+            // mezcla de prioridad aleatoria: da más chance a 1x1, pero permite 2x2 ocasionalmente
+            shuffleArray(trySizes);
+
+            let placedThis = false;
+            for (const [rs, cs] of trySizes) {
+                // comprobar límites
+                if (r + rs > rows || c + cs > cols) continue;
+                // comprobar ocupación del área
+                let canPlace = true;
+                for (let rr = r; rr < r + rs; rr++) {
+                    for (let cc = c; cc < c + cs; cc++) {
+                        if (occupancy[rr][cc]) { canPlace = false; break; }
+                    }
+                    if (!canPlace) break;
+                }
+                if (!canPlace) continue;
+                // colocar: marcar ocupada
+                for (let rr = r; rr < r + rs; rr++) {
+                    for (let cc = c; cc < c + cs; cc++) {
+                        occupancy[rr][cc] = true;
+                    }
+                }
+                const p = shuffled[imgIndex++];
+                const item = document.createElement('div');
+                item.className = 'collage-item';
+                item.setAttribute('data-product-id', p.id);
+                item.style.gridColumn = `span ${cs}`;
+                item.style.gridRow = `span ${rs}`;
+                item.innerHTML = `<img src="${p.img}" loading="lazy" alt="collage">`;
+                item.addEventListener('click', (ev) => {
+                    item.classList.add('collage-item-selected');
+                    setTimeout(() => item.classList.remove('collage-item-selected'), 260);
+                    const id = item.getAttribute('data-product-id');
+                    if (id) {
+                        // activar la tarjeta correspondiente visualmente (si existe en grid de productos)
+                        const card = document.querySelector(`.product-card[data-product-id="${id}"]`);
+                        if (card) {
+                            card.classList.add('active');
+                            // remover active al cabo de un rato si no se abre modal (seguridad)
+                            setTimeout(() => card.classList.remove('active'), 900);
+                        }
+                        openProductModal(id);
+                    }
+                });
+                collageGrid.appendChild(item);
+                placedThis = true;
+                break;
+            }
+            if (!placedThis) {
+                // Si no se pudo colocar con ningún tamaño (área bloqueada), marcamos la celda como ocupada para evitar loop infinito
+                occupancy[r][c] = true;
+            }
+        }
+        if (imgIndex >= shuffled.length) break;
+    }
+
+    // Si por alguna razón no colocamos ninguna (por seguridad), colocar al menos la primera imagen en 1x1
+    if (collageGrid.children.length === 0 && shuffled.length > 0) {
+        const p = shuffled[0];
         const item = document.createElement('div');
         item.className = 'collage-item';
         item.setAttribute('data-product-id', p.id);
-        // siempre span 1x1 para evitar huecos y que cada celda sea cuadrada
         item.style.gridColumn = `span 1`;
         item.style.gridRow = `span 1`;
         item.innerHTML = `<img src="${p.img}" loading="lazy" alt="collage">`;
-        // click abre modal del producto
-        item.addEventListener('click', (ev) => {
-            // animación breve de selección
-            item.classList.add('collage-item-selected');
-            setTimeout(() => item.classList.remove('collage-item-selected'), 260);
-            const id = item.getAttribute('data-product-id');
-            if (id) openProductModal(id);
-        });
+        item.addEventListener('click', () => openProductModal(p.id));
         collageGrid.appendChild(item);
     }
 }
@@ -629,6 +661,11 @@ categoryCarousel.addEventListener('click', (ev) => {
 
 document.addEventListener('click', (e) => {
     if (e.target.closest('.modal-trigger')) {
+        // al activar la tarjeta, la marcamos como active para mostrar el hint sobre la imagen
+        const card = e.target.closest('.product-card');
+        if (card) {
+            card.classList.add('active');
+        }
         const id = e.target.dataset.id;
         openProductModal(id);
     }
@@ -683,10 +720,12 @@ function closeModal(modal) {
             modalAddToCartBtn.disabled = true;
             modalAddToCartBtn.setAttribute('aria-disabled', 'true');
         }
+        // remover estados visuales 'active' de tarjetas producto
+        document.querySelectorAll('.product-card.active').forEach(c => c.classList.remove('active'));
     }
 }
 
-/* Añadimos un manejador más seguro:
+/* Manejador de cierre:
    - siempre cierra cuando se hace click en el botón .modal-close
    - cierra con backdrop click solo si el modal permite backdrop close (dataset.backdropClose !== 'false')
 */
@@ -711,21 +750,13 @@ closeSuccessBtn && closeSuccessBtn.addEventListener('click', () => {
     closeModal(orderSuccessModal);
 });
 
-// --- Store Modal (opens from logo with origin animation) ---
+// --- Store Modal (opens from logo) ---
 function openStoreModalFromLogo() {
     if (!storeModal) return;
-    // compute origin based on logo center
-    const rect = logoElement.getBoundingClientRect();
-    const originX = rect.left + rect.width / 2;
-    const originY = rect.top + rect.height / 2;
-    // set transform origin relative to viewport so the animation seems to come from the logo
-    storeModalContent.style.transformOrigin = `${originX}px ${originY}px`;
-    // prevent closing on backdrop for this modal (user must close explicitly)
+    // evitar cerrar con backdrop: usuario debe usar la X
     storeModal.dataset.backdropClose = 'false';
-    // add entry animation class
-    storeModal.classList.add('animate-from-logo');
+    // NO ANIMACIÓN: abrimos directamente
     showModal(storeModal);
-    setTimeout(() => storeModal.classList.remove('animate-from-logo'), 600);
 }
 
 function closeStoreModal() {
@@ -1273,7 +1304,6 @@ const loadConfigAndInitSupabase = async () => {
     } catch (error) {
         console.error('Error FATAL al iniciar la aplicación:', error);
         
-        // Mostrar aviso de error sencillo y seguro (sin caracteres inválidos)
         const loadingMessage = document.createElement('div');
         loadingMessage.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;display:flex;align-items:center;justify-content:center;color:#a00;font-weight:bold;text-align:center;padding:16px;z-index:99999;';
         loadingMessage.textContent = 'ERROR DE INICIALIZACIÓN: No se pudo cargar la configuración de la tienda. Revisa la consola para más detalles (Faltan variables de entorno en Vercel).';
