@@ -12,10 +12,13 @@
   --offer-1-bg: linear-gradient(135deg,#fff4f9,#ffeef5);
   --offer-2-bg: linear-gradient(135deg,#f0f9ff,#e6f7ff);
   --offer-3-bg: linear-gradient(135deg,#f9fff4,#efffe8);
-  --variant-1: linear-gradient(180deg, #f9f0ff, #fff);
-  --variant-2: linear-gradient(180deg, #fff7f0, #fff);
-  --variant-3: linear-gradient(180deg, #f0fbff, #fff);
-  --variant-4: linear-gradient(180deg, #f7fff4, #fff);
+  --variant-1: linear-gradient(180deg, #b74ab0, #fff);
+  --variant-2: linear-gradient(180deg, #aa00ed, #fff);
+  --variant-3: linear-gradient(180deg, #4b00ff, #fff);
+  --variant-4: linear-gradient(180deg, #2116b9bd, #ffffff);
+  --variant-5: linear-gradient(180deg, #a9ed00, #fff);
+  --variant-6: linear-gradient(180deg, #119745, #fff);
+  --variant-7: linear-gradient(180deg, #b95f16bd, #ffffff);
 }
 
 /* Base and Reset */
@@ -1004,15 +1007,25 @@ body {
   transform: scale(1.05);
 }
 
-/* -----------------------------
-   NUEVOS ESTILOS: VARIANTES,
-   PLACEHOLDER, ANIMACIONES, LOADING
-   ----------------------------- */
+@media (max-width: 768px) {
+  .ads-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .ads-grid {
+    grid-template-columns: 1fr;
+  }
+}
 /* Variantes de color para tarjetas (puedes ajustar colores/gradientes) */
 .card-variant-1 { background: var(--variant-1); }
 .card-variant-2 { background: var(--variant-2); }
 .card-variant-3 { background: var(--variant-3); }
 .card-variant-4 { background: var(--variant-4); }
+.card-variant-5 { background: var(--variant-5); }
+.card-variant-6 { background: var(--variant-6); }
+.card-variant-7 { background: var(--variant-7); }
 
 /* Placeholder / skeleton mientras la tarjeta no se ha renderizado */
 .product-card.placeholder {
