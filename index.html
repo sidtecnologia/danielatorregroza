@@ -65,6 +65,12 @@
     </script>
 </head>
 <body>
+    <!-- Loading screen: visible while app inicializa -->
+    <div id="loading-screen" aria-hidden="false">
+      <div class="loading-spinner" role="img" aria-label="Cargando"></div>
+      <div class="loading-text">Cargando tienda…</div>
+    </div>
+
     <div class="page-container">
 
         <nav class="navbar">
@@ -283,5 +289,3 @@
     <script type="module" src="js/app.js"></script>
 </body>
 </html>
-```
-

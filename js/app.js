@@ -14,6 +14,7 @@ const PRODUCTS_PER_PAGE = 25;
 let orderDetails = {};
 let selectedSize = null;
 let selectedColor = null;
+let firstRenderDone = false; // nuevo flag para animación solo en primera carga
 
 // --- Referencias del DOM ---
 const featuredContainer = document.getElementById('featured-grid');
@@ -73,6 +74,9 @@ const viewerNext = document.getElementById('viewer-next');
 const viewerClose = document.getElementById('viewer-close');
 
 let bannerCarouselState = null; // will hold internal carousel state when initialized
+
+// Loading screen element
+const loadingScreen = document.getElementById('loading-screen');
 
 // --- Funciones de Ayuda ---
 const money = (v) => {
@@ -291,7 +295,53 @@ const generateProductCard = (p) => {
 };
 
 
-// --- Renderizado con paginación ---
+// --- RENDER con placeholders y lazy-render por Intersección ---
+const intersectionOptions = {
+    root: null,
+    rootMargin: '120px',
+    threshold: 0.1
+};
+const cardObserver = new IntersectionObserver((entries, obs) => {
+    entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const placeholder = entry.target;
+        const idx = parseInt(placeholder.dataset.index, 10);
+        if (Number.isNaN(idx)) {
+            obs.unobserve(placeholder);
+            return;
+        }
+        const p = placeholder._productRef || products[idx];
+        if (!p) {
+            obs.unobserve(placeholder);
+            return;
+        }
+
+        // generate real node and replace placeholder
+        const temp = document.createElement('div');
+        temp.innerHTML = generateProductCard(p).trim();
+        const newNode = temp.firstElementChild;
+
+        // assign a stable variant based on index (1..4)
+        const variant = (idx % 4) + 1;
+        newNode.classList.add(`card-variant-${variant}`);
+
+        // apply entry animation only on first render
+        if (!firstRenderDone) {
+            newNode.classList.add('enter');
+        }
+
+        // preserve dataset index for later reference if needed
+        newNode.dataset.index = String(idx);
+
+        placeholder.replaceWith(newNode);
+
+        // stop observing this placeholder
+        obs.unobserve(placeholder);
+
+        // cleanup after the first batch: mark that first render occurred
+    });
+}, intersectionOptions);
+
 function renderProducts(container, data, page = 1, perPage = 20, withPagination = false) {
     container.innerHTML = '';
     const paginationContainer = document.getElementById('pagination-container');
@@ -305,14 +355,40 @@ function renderProducts(container, data, page = 1, perPage = 20, withPagination 
     const start = (page - 1) * perPage;
     const end = start + perPage;
     const currentProducts = data.slice(start, end);
-    currentProducts.forEach(p => container.innerHTML += generateProductCard(p));
+
+    // build placeholders instead of rendering full HTML immediately
+    currentProducts.forEach((p, i) => {
+        // create placeholder element
+        const placeholder = document.createElement('div');
+        placeholder.className = 'product-card placeholder';
+        // assign dataset index relative to the current page slice position mapped to original data
+        const globalIndex = start + i;
+        placeholder.dataset.index = String(globalIndex);
+        // store minimal product reference to avoid lookup later (not required but handy)
+        placeholder._productRef = p;
+        // set a min-height to match product-card
+        placeholder.style.minHeight = '320px';
+
+        // assign variant visually to placeholder
+        const variant = (globalIndex % 4) + 1;
+        placeholder.classList.add(`card-variant-${variant}`);
+
+        container.appendChild(placeholder);
+        // observe placeholder to fill when it becomes visible
+        cardObserver.observe(placeholder);
+    });
+
     if (withPagination && totalPages > 1) {
         renderPagination(page, totalPages, data, perPage);
     } else {
         if (paginationContainer) paginationContainer.innerHTML = '';
     }
 
-    // NO mostramos hints automáticamente aquí — el hint aparece al hover o cuando la tarjeta se activa (clic)
+    // Mark that we've done the first render for the animation policy
+    if (!firstRenderDone) {
+        // after a short time (to allow visible ones to animate) mark as done
+        setTimeout(() => { firstRenderDone = true; }, 900);
+    }
 }
 
 function enableTouchHints() {
@@ -1232,6 +1308,18 @@ whatsappBtn.addEventListener('click', async () => {
     }
 });
 
+// show/hide loading screen helpers
+function showLoadingScreen() {
+    if (!loadingScreen) return;
+    loadingScreen.classList.remove('hidden');
+    loadingScreen.style.display = 'flex';
+}
+function hideLoadingScreen() {
+    if (!loadingScreen) return;
+    loadingScreen.classList.add('hidden');
+    loadingScreen.style.display = 'none';
+}
+
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
@@ -1270,6 +1358,9 @@ const fetchProductsFromSupabase = async () => {
 
 const loadConfigAndInitSupabase = async () => {
     try {
+        // mostrar pantalla de carga al iniciar
+        showLoadingScreen();
+
         const response = await fetch('api/get-config');
         
         if (!response.ok) {
@@ -1301,11 +1392,20 @@ const loadConfigAndInitSupabase = async () => {
             renderCollage();
         }
         updateCart();
+
+        // esconder loading cuando todo haya quedado renderizado (o al menos placeholders en marcha)
+        // esperamos un poco para que el usuario vea transición agradable
+        setTimeout(() => {
+            hideLoadingScreen();
+        }, 350);
+
     } catch (error) {
         console.error('Error FATAL al iniciar la aplicación:', error);
         
+        hideLoadingScreen();
+
         const loadingMessage = document.createElement('div');
-        loadingMessage.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;display:flex;align-items:center;justify-content:center;color:#a00;font-weight:bold;text-align:center;padding:16px;z-index:99999;';
+        loadingMessage.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;display:flex;align-items:center;justify-content:center;color:#a00;font-weight:bold;text-align:center;padding:20px;z-index:4000';
         loadingMessage.textContent = 'ERROR DE INICIALIZACIÓN: No se pudo cargar la configuración de la tienda. Revisa la consola para más detalles (Faltan variables de entorno en Vercel).';
         document.body.appendChild(loadingMessage);
     }
