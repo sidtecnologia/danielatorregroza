@@ -15,6 +15,23 @@ let orderDetails = {};
 let selectedSize = null;
 let selectedColor = null;
 
+// IntersectionObserver para revelar tarjetas lazy
+let productRevealObserver = null;
+function ensureProductRevealObserver() {
+  if (productRevealObserver) return productRevealObserver;
+  productRevealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && entry.intersectionRatio > 0.12) {
+        const el = entry.target;
+        el.classList.remove('lazy-hidden');
+        el.classList.add('card-enter');
+        productRevealObserver.unobserve(el);
+      }
+    });
+  }, { root: null, rootMargin: '0px 0px 120px 0px', threshold: [0.12] });
+  return productRevealObserver;
+}
+
 // --- Referencias del DOM ---
 const featuredContainer = document.getElementById('featured-grid');
 const offersGrid = document.getElementById('offers-grid');
@@ -251,6 +268,8 @@ async function fetchBannerImagesFromSupabase() {
 }
 
 // --- Renderizado y tarjetas (sin romper lógica original) ---
+// Añadimos background aleatorio por tarjeta (sin alterar datos).
+const bgClassesPool = ['card-bg-1','card-bg-2','card-bg-3'];
 const generateProductCard = (p) => {
     let bestSellerTag = '';
     if (p.bestSeller) {
@@ -267,8 +286,11 @@ const generateProductCard = (p) => {
     // allow offer style classes (for offers grid visual variety)
     const offerClass = p._offerStyle ? ` ${p._offerStyle}` : '';
 
+    // pick a random bg class (will be deterministic per render call)
+    const bgClass = bgClassesPool[Math.floor(Math.random() * bgClassesPool.length)];
+
     return `
-      <div class="product-card${stockClass}${offerClass}" data-product-id="${p.id}">
+      <div class="product-card ${bgClass}${stockClass}${offerClass}" data-product-id="${p.id}">
         ${bestSellerTag}
         <div class="image-wrap">
           <img src="${p.image && p.image[0] ? p.image[0] : 'img/favicon.png'}" alt="${p.name}" class="product-image modal-trigger" data-id="${p.id}" loading="lazy" />
@@ -312,9 +334,42 @@ function renderProducts(container, data, page = 1, perPage = 20, withPagination 
         if (paginationContainer) paginationContainer.innerHTML = '';
     }
 
-    // NO mostramos hints automáticamente aquí — el hint aparece al hover o cuando la tarjeta se activa (clic)
+    // Tras renderizar: marcar todas las tarjetas como lazy-hidden y observarlas
+    const observer = ensureProductRevealObserver();
+    const cards = container.querySelectorAll('.product-card');
+    cards.forEach(card => {
+        // start hidden; if already visible in DOM, observer will reveal when in viewport
+        card.classList.add('lazy-hidden');
+        // ensure no leftover enter class
+        card.classList.remove('card-enter');
+        try { observer.observe(card); } catch (e) {}
+    });
 }
 
+function showImageHints(container) {
+    try {
+        const hints = container.querySelectorAll('.image-hint');
+        const max = Math.min(6, hints.length);
+        for (let i = 0; i < max; i++) {
+            const h = hints[i];
+            h.classList.add('show-hint');
+            h.style.transitionDelay = `${i * 120}ms`;
+        }
+        setTimeout(() => {
+            for (let i = 0; i < max; i++) {
+                const h = hints[i];
+                if (h) {
+                    h.classList.remove('show-hint');
+                    h.style.transitionDelay = '';
+                }
+            }
+        }, 2200);
+    } catch (err) {
+        console.warn('showImageHints err', err);
+    }
+}
+
+// Touch hint handling adjusted elsewhere
 function enableTouchHints() {
   let lastTouchedCard = null;
   let lastTouchMoved = false;
@@ -434,7 +489,6 @@ function renderCollage() {
     const cols = 4, rows = 4;
     const occupancy = Array.from({ length: rows }, () => Array(cols).fill(false));
 
-    const placed = [];
     let imgIndex = 0;
 
     // algoritmo: recorremos posiciones por filas/columnas buscando el primer lugar libre y
@@ -450,7 +504,6 @@ function renderCollage() {
                 [1,2],
                 [1,1]
             ];
-            // mezcla de prioridad aleatoria: da más chance a 1x1, pero permite 2x2 ocasionalmente
             shuffleArray(trySizes);
 
             let placedThis = false;
@@ -484,11 +537,9 @@ function renderCollage() {
                     setTimeout(() => item.classList.remove('collage-item-selected'), 260);
                     const id = item.getAttribute('data-product-id');
                     if (id) {
-                        // activar la tarjeta correspondiente visualmente (si existe en grid de productos)
                         const card = document.querySelector(`.product-card[data-product-id="${id}"]`);
                         if (card) {
                             card.classList.add('active');
-                            // remover active al cabo de un rato si no se abre modal (seguridad)
                             setTimeout(() => card.classList.remove('active'), 900);
                         }
                         openProductModal(id);
@@ -499,14 +550,13 @@ function renderCollage() {
                 break;
             }
             if (!placedThis) {
-                // Si no se pudo colocar con ningún tamaño (área bloqueada), marcamos la celda como ocupada para evitar loop infinito
                 occupancy[r][c] = true;
             }
         }
         if (imgIndex >= shuffled.length) break;
     }
 
-    // Si por alguna razón no colocamos ninguna (por seguridad), colocar al menos la primera imagen en 1x1
+    // fallback si no colocó nada
     if (collageGrid.children.length === 0 && shuffled.length > 0) {
         const p = shuffled[0];
         const item = document.createElement('div');
@@ -593,6 +643,26 @@ searchInput.addEventListener('input', (e) => {
     renderProducts(allFilteredContainer, filtered, 1, 20, true);
 });
 
+// Loading overlay helpers
+function createLoadingOverlayIfNeeded() {
+  if (document.getElementById('loading-overlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'loading-overlay';
+  overlay.className = 'loading-overlay';
+  overlay.innerHTML = `<div class="spinner" aria-hidden="true"></div><div class="loading-text">Cargando...</div>`;
+  document.body.appendChild(overlay);
+}
+function showLoading() {
+  createLoadingOverlayIfNeeded();
+  const o = document.getElementById('loading-overlay');
+  if (o) o.classList.remove('hidden');
+}
+function hideLoading() {
+  const o = document.getElementById('loading-overlay');
+  if (o) o.classList.add('hidden');
+}
+
+// Keep previous showDefaultSections but ensure we hide loading at the end
 const showDefaultSections = () => {
     featuredSection.style.display = 'block';
     offersSection.style.display = 'block';
@@ -610,6 +680,26 @@ const showDefaultSections = () => {
     renderProducts(offersGrid, offers, 1, 25, false);
     renderCollage();
     generateCategoryCarousel();
+    // a esta altura la UI inicial está renderizada: ocultamos loading
+    hideLoading();
+};
+
+const generateCategoryCarousel = () => {
+    if (!categoryCarousel) return;
+    categoryCarousel.innerHTML = '';
+    const categories = Array.from(new Set(products.map(p => p.category))).map(c => ({ label: c }));
+    const allItem = document.createElement('div');
+    allItem.className = 'category-item';
+    const allIconPath = 'img/icons/all.webp';
+    allItem.innerHTML = `<img class="category-image" src="${allIconPath}" alt="Todo" data-category="__all"><span class="category-name">Todo</span>`;
+    categoryCarousel.appendChild(allItem);
+    categories.forEach(c => {
+        const el = document.createElement('div');
+        el.className = 'category-item';
+        const fileName = `img/icons/${(c.label || '').toLowerCase().replace(/\s+/g, '_')}.webp`;
+        el.innerHTML = `<img class="category-image" src="${fileName}" alt="${c.label}" data-category="${c.label}"><span class="category-name">${c.label}</span>`;
+        categoryCarousel.appendChild(el);
+    });
 };
 
 categoryCarousel.addEventListener('click', (ev) => {
@@ -1270,12 +1360,15 @@ const fetchProductsFromSupabase = async () => {
 
 const loadConfigAndInitSupabase = async () => {
     try {
+        // mostrar overlay de carga mientras obtenemos configuración y productos
+        showLoading();
+
         const response = await fetch('api/get-config');
         
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Error del API Route api/get-config:', errorText);
-            throw new Error(`Fallo al cargar la configuración desde V: ${response.status} ${response.statusText}`);
+            throw new Error(`Fallo al cargar la configuración: ${response.status} ${response.statusText}`);
         }
         
         const config = await response.json();
@@ -1299,11 +1392,12 @@ const loadConfigAndInitSupabase = async () => {
             generateCategoryCarousel();
         } else {
             renderCollage();
+            hideLoading();
         }
         updateCart();
     } catch (error) {
         console.error('Error FATAL al iniciar la aplicación:', error);
-        
+        hideLoading();
         const loadingMessage = document.createElement('div');
         loadingMessage.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;display:flex;align-items:center;justify-content:center;color:#a00;font-weight:bold;text-align:center;padding:16px;z-index:99999;';
         loadingMessage.textContent = 'ERROR DE INICIALIZACIÓN: No se pudo cargar la configuración de la tienda. Revisa la consola para más detalles (Faltan variables de entorno en Vercel).';
