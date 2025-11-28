@@ -13,7 +13,7 @@
   --offer-2-bg: linear-gradient(135deg,#f0f9ff,#e6f7ff);
   --offer-3-bg: linear-gradient(135deg,#f9fff4,#efffe8);
   --variant-1: linear-gradient(180deg, #b74ab0, #fff);
-  --variant-2: linear-gradient(180deg, #aa00ed, #fff);
+  --variant-2: linear-gradient(180deg, #edd200, #fff);
   --variant-3: linear-gradient(180deg, #4b00ff, #fff);
   --variant-4: linear-gradient(180deg, #2116b9bd, #ffffff);
   --variant-5: linear-gradient(180deg, #a9ed00, #fff);
@@ -615,7 +615,7 @@ body {
   border: none;
   background: var(--tenue);
   cursor: pointer;
-  color: #333;
+  color: var(--bg);
   z-index: 20;
   width:40px;
   height:40px;
@@ -963,7 +963,7 @@ body {
 
 .ticker-text {
   display: inline-block;
-  animation: ticker-scroll 60s linear infinite;
+  animation: ticker-scroll 20s linear infinite;
 }
 
 .ticker-text span {
