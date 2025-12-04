@@ -1025,7 +1025,7 @@ body {
 
 @media (max-width: 480px) {
   .ads-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 /* Variantes de color para tarjetas (puedes ajustar colores/gradientes) */
